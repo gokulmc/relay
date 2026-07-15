@@ -1,6 +1,11 @@
 import AppKit
 import RelayKit
 
+/// `@MainActor`-isolated: every method here touches AppKit (status item, menus, `NSAlert`s).
+/// Without this, `async` methods like `performToggle()` resume on the cooperative executor (a
+/// background thread), and creating an `NSAlert`/`NSWindow` off the main thread makes AppKit throw
+/// an uncaught exception → SIGABRT. Main-actor isolation forces all UI work onto the main thread.
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private weak var rootMenu: NSMenu?
@@ -12,6 +17,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var lastError: String?
     private var healthTimer: Timer?
     private var logsWindow: ProxyLogsWindowController?
+
+    /// Builds a menu-item title with an emoji prefix on its own font run, separate from the
+    /// text run. `NSFont.menuFont` doesn't carry reliable glyph metrics for every emoji (gear/
+    /// nut-and-bolt in particular render with a misaligned/duplicated glyph when baked into the
+    /// same run as the text) — giving the emoji its own `.appleColorEmoji` run sidesteps that.
+    private static func emojiMenuTitle(emoji: String, text: String, color: NSColor) -> NSAttributedString {
+        let emojiFont = NSFont(name: "AppleColorEmoji", size: 13) ?? NSFont.menuFont(ofSize: 0)
+        let result = NSMutableAttributedString(string: emoji, attributes: [.font: emojiFont])
+        result.append(NSAttributedString(string: " " + text, attributes: [
+            .font: NSFont.menuFont(ofSize: 0),
+            .foregroundColor: color,
+        ]))
+        return result
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -90,12 +109,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             menu.addItem(.separator())
         }
 
-        let toggleTitle = routingMode == .deepSeek ? "Switch to Claude" : "Switch to DeepSeek"
-        let toggleItem = NSMenuItem(
-            title: isBusy ? "Working…" : toggleTitle,
-            action: #selector(toggleRouting),
-            keyEquivalent: ""
-        )
+        let toggleItem = NSMenuItem()
+        if isBusy {
+            toggleItem.attributedTitle = Self.emojiMenuTitle(emoji: "⏳", text: "Working…", color: NSColor.secondaryLabelColor)
+        } else {
+            let targetTitle = routingMode == .deepSeek ? "Switch to Claude" : "Switch to DeepSeek"
+            toggleItem.attributedTitle = Self.emojiMenuTitle(emoji: "🔄", text: targetTitle, color: NSColor.labelColor)
+        }
+        toggleItem.action = #selector(toggleRouting)
+        toggleItem.keyEquivalent = ""
         toggleItem.target = self
         toggleItem.isEnabled = !isBusy
         menu.addItem(toggleItem)
@@ -111,54 +133,56 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         sectionItem.isEnabled = false
         menu.addItem(sectionItem)
 
+        let proxyEmoji: String
         let proxyActionTitle: String
         let proxyAction: Selector?
         switch proxyStatus {
         case .running:
+            proxyEmoji = "⏹️"
             proxyActionTitle = "Stop Proxy"
             proxyAction = #selector(stopProxy)
         case .starting:
+            proxyEmoji = "⏳"
             proxyActionTitle = "Proxy Starting…"
             proxyAction = nil
         default:
+            proxyEmoji = "▶️"
             proxyActionTitle = "Start Proxy"
             proxyAction = #selector(startProxy)
         }
-        let proxyItem = NSMenuItem(title: proxyActionTitle, action: proxyAction, keyEquivalent: "")
+        let proxyItem = NSMenuItem()
+        proxyItem.attributedTitle = Self.emojiMenuTitle(emoji: proxyEmoji, text: proxyActionTitle, color: NSColor.labelColor)
+        proxyItem.action = proxyAction
+        proxyItem.keyEquivalent = ""
         proxyItem.target = self
         proxyItem.isEnabled = !isBusy && proxyAction != nil
         menu.addItem(proxyItem)
 
-        menu.addItem(.separator())
-
-        let settingsItem = NSMenuItem(
-            title: "DeepSeek Settings…",
-            action: #selector(openSettings),
-            keyEquivalent: ""
-        )
+        let settingsItem = NSMenuItem()
+        settingsItem.attributedTitle = Self.emojiMenuTitle(emoji: "🔩", text: "DeepSeek Settings…", color: NSColor.labelColor)
+        settingsItem.action = #selector(openSettings)
+        settingsItem.keyEquivalent = ""
         settingsItem.target = self
         settingsItem.isEnabled = !isBusy
         menu.addItem(settingsItem)
 
-        let logsItem = NSMenuItem(
-            title: "View Proxy Logs",
-            action: #selector(openLogs),
-            keyEquivalent: ""
-        )
+        let logsItem = NSMenuItem()
+        logsItem.attributedTitle = Self.emojiMenuTitle(emoji: "📋", text: "View Proxy Logs", color: NSColor.labelColor)
+        logsItem.action = #selector(openLogs)
+        logsItem.keyEquivalent = ""
         logsItem.target = self
         menu.addItem(logsItem)
 
-        let repairItem = NSMenuItem(
-            title: "Repair / Reinstall LiteLLM Environment",
-            action: #selector(repairEnvironment),
-            keyEquivalent: ""
-        )
+        let repairItem = NSMenuItem()
+        repairItem.attributedTitle = Self.emojiMenuTitle(emoji: "🔧", text: "Repair / Reinstall LiteLLM Environment", color: NSColor.labelColor)
+        repairItem.action = #selector(repairEnvironment)
+        repairItem.keyEquivalent = ""
         repairItem.target = self
         repairItem.isEnabled = !isBusy
         menu.addItem(repairItem)
 
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quit Relay", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: "🚪 Quit Relay", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
     }
 
     private func refreshStatusItem() {
@@ -166,8 +190,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let symbol = routingMode == .deepSeek
             ? "arrow.triangle.2.circlepath.circle.fill"
             : "arrow.triangle.2.circlepath"
-        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Relay")
-        button.image?.isTemplate = true
+        let accentColor: NSColor = routingMode == .deepSeek
+            ? NSColor(calibratedRed: 0.20, green: 0.47, blue: 0.94, alpha: 1)
+            : NSColor(calibratedRed: 0.94, green: 0.42, blue: 0.31, alpha: 1)
+        let image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Relay")
+        let config = NSImage.SymbolConfiguration(paletteColors: [accentColor])
+        button.image = image?.withSymbolConfiguration(config)
+        button.image?.isTemplate = false
         button.toolTip = routingMode == .deepSeek
             ? "Relay: DeepSeek via local proxy"
             : "Relay: Claude (claude.ai)"

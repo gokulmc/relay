@@ -17,7 +17,11 @@ public struct ProxyHealthChecker: Sendable {
     }
 
     public func check(port: Int = AppSupport.defaultPort) async -> Bool {
-        guard let url = URL(string: "http://127.0.0.1:\(port)/health") else { return false }
+        // Use LiteLLM's liveness probe, NOT `/health`. The plain `/health` endpoint requires the
+        // master key (returns 500 unauthenticated) and actively pings every upstream model, so it
+        // can never be a fast, unauthenticated readiness signal. `/health/liveliness` returns 200
+        // as soon as the server is accepting requests, with no auth and no upstream calls.
+        guard let url = URL(string: "http://127.0.0.1:\(port)/health/liveliness") else { return false }
         do {
             let (_, response) = try await session.data(from: url)
             guard let http = response as? HTTPURLResponse else { return false }

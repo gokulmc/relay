@@ -125,6 +125,10 @@ final class ProxyAndVenvTests: XCTestCase {
         let ok = await checker.check(port: port)
         XCTAssertTrue(ok)
 
+        // Regression guard: LiteLLM's plain `/health` requires the master key (500 without auth)
+        // and pings upstream models, so the checker must hit the unauthenticated liveness probe.
+        XCTAssertEqual(server.lastRequestPath, "/health/liveliness")
+
         let dead = await checker.check(port: port + 1)
         XCTAssertFalse(dead)
     }
@@ -151,6 +155,14 @@ final class TinyHTTPServer {
     private var socket: Int32 = -1
     private var source: DispatchSourceRead?
     private let queue = DispatchQueue(label: "relay.test.http")
+    private let pathLock = NSLock()
+    private var _lastRequestPath: String?
+
+    /// Request target of the most recent handled request (e.g. `/health/liveliness`).
+    var lastRequestPath: String? {
+        pathLock.lock(); defer { pathLock.unlock() }
+        return _lastRequestPath
+    }
 
     func start(statusCode: Int, body: String) throws -> Int {
         socket = Darwin.socket(AF_INET, SOCK_STREAM, 0)
@@ -188,7 +200,17 @@ final class TinyHTTPServer {
             let client = Darwin.accept(self.socket, nil, nil)
             guard client >= 0 else { return }
             var buffer = [UInt8](repeating: 0, count: 4096)
-            _ = Darwin.read(client, &buffer, buffer.count)
+            let n = Darwin.read(client, &buffer, buffer.count)
+            if n > 0, let request = String(bytes: buffer[0..<n], encoding: .utf8) {
+                // Request line looks like: `GET /health/liveliness HTTP/1.1`
+                let firstLine = request.split(separator: "\r\n", maxSplits: 1).first ?? ""
+                let fields = firstLine.split(separator: " ")
+                if fields.count >= 2 {
+                    self.pathLock.lock()
+                    self._lastRequestPath = String(fields[1])
+                    self.pathLock.unlock()
+                }
+            }
             let response = "HTTP/1.1 \(statusCode) OK\r\nContent-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n\(body)"
             _ = response.withCString { Darwin.write(client, $0, strlen($0)) }
             Darwin.close(client)

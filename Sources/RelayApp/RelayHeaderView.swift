@@ -37,6 +37,12 @@ final class RelayHeaderView: NSView {
         return "Routing \(modeName), proxy \(proxyStatus.label)"
     }
 
+    private var accentColor: NSColor {
+        mode == .deepSeek
+            ? NSColor(calibratedRed: 0.20, green: 0.47, blue: 0.94, alpha: 1)
+            : NSColor(calibratedRed: 0.94, green: 0.42, blue: 0.31, alpha: 1)
+    }
+
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
 
@@ -46,7 +52,7 @@ final class RelayHeaderView: NSView {
         let hero = mode == .deepSeek ? "DeepSeek" : "Claude"
         let heroAttrs: [NSAttributedString.Key: Any] = [
             .font: roundedFont(ofSize: 26, weight: .bold),
-            .foregroundColor: NSColor.labelColor,
+            .foregroundColor: accentColor,
             .kern: -0.5,
         ]
         NSAttributedString(string: hero, attributes: heroAttrs).draw(at: NSPoint(x: padding, y: topInset))
