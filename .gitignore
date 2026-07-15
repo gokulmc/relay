@@ -1,0 +1,6 @@
+.build/
+*.app
+*.dmg
+.release-build/
+.swiftpm/
+.DS_Store
