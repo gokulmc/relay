@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 540" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 460" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#ffffff"/>
@@ -7,99 +7,80 @@
     <marker id="arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto">
       <path d="M0 0 L10 5 L0 10 z" fill="#94a3b8"/>
     </marker>
-    <linearGradient id="claudeGrad" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#f05637"/>
-      <stop offset="1" stop-color="#d9472b"/>
-    </linearGradient>
-    <linearGradient id="deepseekGrad" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#3478f0"/>
-      <stop offset="1" stop-color="#2563d8"/>
-    </linearGradient>
   </defs>
 
-  <rect x="3" y="3" width="914" height="534" rx="16" fill="url(#bg)" stroke="#e2e8f0"/>
+  <rect x="3" y="3" width="914" height="454" rx="16" fill="url(#bg)" stroke="#e2e8f0"/>
 
   <text x="40" y="50" font-size="23" font-weight="700" fill="#0f172a">Architecture</text>
   <text x="40" y="77" font-size="13.5" fill="#64748b">One pure-Swift core, <tspan font-weight="700" fill="#475569">RelayKit</tspan>, behind the menu bar app. No AppKit code touches settings, Keychain, or the proxy.</text>
 
-  <!-- ===== consumers ===== -->
-  <g>
-    <rect x="310" y="96" width="300" height="56" rx="11" fill="#ffffff" stroke="#c9d8ee"/>
-    <rect x="310" y="96" width="300" height="4" rx="2" fill="#0a84ff"/>
-    <text x="330" y="122" font-size="14.5" font-weight="700" fill="#0f172a">Relay.app</text>
-    <text x="330" y="141" font-size="12" fill="#64748b">NSStatusItem + NSMenu · AppKit</text>
-  </g>
+  <!-- Relay.app -->
+  <rect x="310" y="96" width="300" height="56" rx="11" fill="#ffffff" stroke="#c9d8ee"/>
+  <rect x="310" y="96" width="300" height="4" rx="2" fill="#0a84ff"/>
+  <text x="320" y="122" font-size="14.5" font-weight="700" fill="#0f172a">Relay.app</text>
+  <text x="320" y="141" font-size="12" fill="#64748b">NSStatusItem + NSMenu · AppKit</text>
 
   <line x1="460" y1="152" x2="460" y2="184" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
 
-  <!-- ===== RelayKit ===== -->
-  <rect x="40" y="186" width="840" height="186" rx="14" fill="#f6faff" stroke="#cfe0f5"/>
+  <!-- RelayKit container -->
+  <rect x="40" y="186" width="840" height="140" rx="14" fill="#f6faff" stroke="#cfe0f5"/>
   <text x="62" y="214" font-size="14" font-weight="700" fill="#0f172a">RelayKit <tspan font-weight="500" fill="#64748b">— pure Swift package · zero UI · 49 unit tests</tspan></text>
 
-  <!-- row 1 chips -->
+  <!-- Row 1 -->
   <g font-size="12" font-weight="600" fill="#0f172a">
-    <rect x="64"  y="232" width="176" height="40" rx="9" fill="#ffffff" stroke="#d7e3f2"/>
-    <text x="152" y="257" text-anchor="middle">KeychainStore</text>
-    <rect x="256" y="232" width="176" height="40" rx="9" fill="#ffffff" stroke="#d7e3f2"/>
-    <text x="344" y="257" text-anchor="middle">ToggleService</text>
-    <rect x="448" y="232" width="232" height="40" rx="9" fill="#eafaf0" stroke="#57c87d" stroke-width="1.5"/>
-    <text x="468" y="257" font-size="11.5" fill="#1a7f37">ClaudeSettingsWriter</text>
-    <rect x="696" y="232" width="160" height="40" rx="9" fill="#eafaf0" stroke="#57c87d" stroke-width="1.5"/>
-    <text x="716" y="257" font-size="11.5" fill="#1a7f37">VSCodeSettingsWriter</text>
+    <rect x="62"  y="232" width="180" height="38" rx="8" fill="#ffffff" stroke="#d7e3f2"/>
+    <text x="152" y="255" text-anchor="middle">KeychainStore</text>
+    <rect x="254" y="232" width="180" height="38" rx="8" fill="#fff8e6" stroke="#e6cc7c" stroke-width="1.2"/>
+    <text x="344" y="255" text-anchor="middle" font-size="11.5">ToggleService</text>
+    <rect x="446" y="232" width="196" height="38" rx="8" fill="#ffffff" stroke="#d7e3f2"/>
+    <text x="544" y="255" text-anchor="middle">ClaudeSettingsWriter</text>
+    <rect x="654" y="232" width="210" height="38" rx="8" fill="#ffffff" stroke="#d7e3f2"/>
+    <text x="759" y="255" text-anchor="middle">VSCodeSettingsWriter</text>
   </g>
 
-  <!-- row 2 chips -->
+  <!-- Row 2 -->
   <g font-size="12" font-weight="600" fill="#0f172a">
-    <rect x="64"  y="284" width="224" height="40" rx="9" fill="#ffffff" stroke="#d7e3f2"/>
-    <text x="176" y="309" text-anchor="middle">ProxyProcessManager</text>
-    <rect x="304" y="284" width="184" height="40" rx="9" fill="#ffffff" stroke="#d7e3f2"/>
-    <text x="396" y="309" text-anchor="middle">VenvInstaller</text>
-    <rect x="504" y="284" width="160" height="40" rx="9" fill="#ffffff" stroke="#d7e3f2"/>
-    <text x="584" y="309" text-anchor="middle">PythonProbe</text>
-    <rect x="680" y="284" width="176" height="40" rx="9" fill="#ffffff" stroke="#d7e3f2"/>
-    <text x="768" y="309" text-anchor="middle">ProxyLogStore</text>
+    <rect x="62"  y="280" width="220" height="38" rx="8" fill="#ffffff" stroke="#d7e3f2"/>
+    <text x="172" y="303" text-anchor="middle">ProxyProcessManager</text>
+    <rect x="294" y="280" width="180" height="38" rx="8" fill="#ffffff" stroke="#d7e3f2"/>
+    <text x="384" y="303" text-anchor="middle">VenvInstaller</text>
+    <rect x="486" y="280" width="160" height="38" rx="8" fill="#ffffff" stroke="#d7e3f2"/>
+    <text x="566" y="303" text-anchor="middle">PythonProbe</text>
+    <rect x="658" y="280" width="180" height="38" rx="8" fill="#ffffff" stroke="#d7e3f2"/>
+    <text x="748" y="303" text-anchor="middle">ProxyLogStore</text>
   </g>
 
-  <text x="62" y="354" font-size="11.5" fill="#8a97a8">ToggleService coordinates: <tspan fill="#475569" font-weight="600">write settings → start proxy → health check</tspan>. Rollback on proxy-start failure. Settings files are backed up before every write.</text>
+  <!-- Arrows down -->
+  <line x1="152" y1="326" x2="152" y2="368" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="172" y1="326" x2="172" y2="408" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="544" y1="326" x2="544" y2="368" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="759" y1="326" x2="759" y2="368" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="384" y1="326" x2="384" y2="408" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
 
-  <!-- arrows down to externals -->
-  <line x1="152" y1="372" x2="152" y2="430" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
-  <line x1="564" y1="372" x2="564" y2="430" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
-  <line x1="716" y1="372" x2="716" y2="430" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
-  <line x1="176" y1="372" x2="176" y2="480" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
-  <line x1="396" y1="372" x2="396" y2="480" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
-
-  <!-- ===== externals row 1 ===== -->
+  <!-- Externals row -->
   <g>
-    <rect x="64"  y="432" width="176" height="56" rx="11" fill="#ffffff" stroke="#c9d8ee"/>
-    <text x="152" y="456" font-size="12.5" font-weight="700" fill="#0f172a" text-anchor="middle">macOS Keychain</text>
-    <text x="152" y="475" font-size="10.5" fill="#64748b" text-anchor="middle">API key + master key</text>
+    <!-- Keychain -->
+    <rect x="64"  y="370" width="176" height="56" rx="10" fill="#ffffff" stroke="#c9d8ee"/>
+    <text x="152" y="394" font-size="12.5" font-weight="700" fill="#0f172a" text-anchor="middle">macOS Keychain</text>
+    <text x="152" y="413" font-size="10.5" fill="#64748b" text-anchor="middle">API key + master key</text>
 
-    <rect x="464" y="432" width="200" height="56" rx="11" fill="#ffffff" stroke="#c9d8ee"/>
-    <text x="564" y="456" font-size="12.5" font-weight="700" fill="#0f172a" text-anchor="middle">~/.claude/settings.json</text>
-    <text x="564" y="475" font-size="10.5" fill="#64748b" text-anchor="middle">env.ANTHROPIC_BASE_URL…</text>
+    <!-- Claude settings -->
+    <rect x="464" y="370" width="160" height="56" rx="10" fill="#ffffff" stroke="#c9d8ee"/>
+    <text x="544" y="394" font-size="12.5" font-weight="700" fill="#0f172a" text-anchor="middle">~/.claude/settings.json</text>
+    <text x="544" y="413" font-size="10.5" fill="#64748b" text-anchor="middle">env vars · JSON merge</text>
 
-    <rect x="636" y="432" width="160" height="56" rx="11" fill="#ffffff" stroke="#c9d8ee"/>
-    <text x="716" y="456" font-size="12.5" font-weight="700" fill="#0f172a" text-anchor="middle">VS Code settings.json</text>
-    <text x="716" y="475" font-size="10.5" fill="#64748b" text-anchor="middle">JSONC · textual patch</text>
+    <!-- VS Code settings -->
+    <rect x="644" y="370" width="230" height="56" rx="10" fill="#ffffff" stroke="#c9d8ee"/>
+    <text x="759" y="394" font-size="12" font-weight="700" fill="#0f172a" text-anchor="middle">VS Code settings.json</text>
+    <text x="759" y="413" font-size="10.5" fill="#64748b" text-anchor="middle">JSONC · textual patch</text>
   </g>
 
-  <!-- ===== externals row 2 ===== -->
+  <!-- LiteLLM + Python row -->
   <g>
-    <rect x="64"  y="482" width="200" height="56" rx="11" fill="#ffffff" stroke="#c9d8ee"/>
-    <text x="164" y="506" font-size="12.5" font-weight="700" fill="#0f172a" text-anchor="middle">LiteLLM Proxy</text>
-    <text x="164" y="525" font-size="10.5" fill="#64748b" text-anchor="middle">Python venv · port 4000</text>
+    <rect x="62"  y="410" width="220" height="40" rx="8" fill="#fff8e6" stroke="#e6cc7c" stroke-width="1.2"/>
+    <text x="172" y="435" font-size="12" font-weight="700" fill="#8a6d00" text-anchor="middle">LiteLLM Proxy (port 4000)</text>
 
-    <rect x="304" y="482" width="184" height="56" rx="11" fill="#ffffff" stroke="#c9d8ee"/>
-    <text x="396" y="506" font-size="12.5" font-weight="700" fill="#0f172a" text-anchor="middle">Python 3.11–3.13</text>
-    <text x="396" y="525" font-size="10.5" fill="#64748b" text-anchor="middle">version-preferring probe</text>
+    <rect x="296" y="410" width="176" height="40" rx="8" fill="#ffffff" stroke="#d7e3f2"/>
+    <text x="384" y="435" font-size="12" font-weight="600" fill="#0f172a" text-anchor="middle">Python 3.11–3.13</text>
   </g>
-
-  <!-- ===== routing flow at bottom ===== -->
-  <rect x="340" y="500" width="540" height="26" rx="6" fill="#f0f4ff" stroke="#d0ddf5"/>
-  <rect x="340" y="500" width="160" height="26" rx="6" fill="url(#claudeGrad)"/>
-  <rect x="500" y="500" width="380" height="26" rx="6" fill="url(#deepseekGrad)"/>
-  <text x="420" y="518" font-size="11" font-weight="600" fill="#ffffff" text-anchor="middle">Claude (claude.ai)</text>
-  <text x="690" y="518" font-size="11" font-weight="600" fill="#ffffff" text-anchor="middle">DeepSeek (via local proxy)</text>
-  <text x="335" y="518" font-size="10" fill="#64748b" text-anchor="end">Toggle →</text>
 </svg>
