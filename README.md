@@ -6,6 +6,12 @@ your Anthropic claude.ai subscription and DeepSeek API credits through a local
 
 One click switches everything. Quit the app and everything reverts.
 
+<p align="center">
+  <img src="docs/screenshot.png" width="120" alt="Relay menu bar icon: coral arrow-triangle in DeepSeek mode">
+  &nbsp;&nbsp;
+  <img src="docs/architecture.svg" width="580" alt="Relay architecture: RelayKit is the pure-Swift core, the menu bar app sits on top, settings files and LiteLLM proxy below">
+</p>
+
 ## What it does
 
 - **Switch to DeepSeek** — sets `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` in both
@@ -102,6 +108,16 @@ login keychain (no sudo, no system-wide changes).
   models through any gateway.** This is a personal-use tool built against documented,
   supported environment variables. If a Claude Code update changes how those vars work,
   Relay will need to follow.
+
+## Architecture
+
+<p align="center">
+  <a href="docs/architecture.svg"><img src="docs/architecture.svg" width="860" alt="Relay architecture diagram"></a>
+</p>
+
+**RelayKit** is a pure Swift package (zero AppKit imports) behind the menu bar app.
+All logic — Keychain access, settings-file mutation, venv management, proxy lifecycle —
+lives here and is independently unit-tested.
 
 ## License
 
