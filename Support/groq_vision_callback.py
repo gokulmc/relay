@@ -9,10 +9,20 @@ Uses only stdlib (urllib + json + base64) — zero extra pip dependencies.
 import base64
 import json
 import os
+import ssl
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from litellm.integrations.custom_logger import CustomLogger
+
+# The proxy runs under a Homebrew/venv Python whose stdlib urllib has no CA
+# bundle configured, so HTTPS to api.groq.com fails with CERTIFICATE_VERIFY_FAILED.
+# litellm depends on certifi, so use its bundle for a verified TLS context.
+try:
+    import certifi
+    _SSL_CTX = ssl.create_default_context(cafile=certifi.where())
+except Exception:
+    _SSL_CTX = ssl.create_default_context()
 
 VISION_MODEL = os.environ.get(
     "GROQ_VISION_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct"
@@ -48,10 +58,13 @@ def _describe_image(image_data: bytes, prompt: str = VISION_PROMPT) -> str | Non
         headers={
             "Authorization": f"Bearer {GROQ_API_KEY}",
             "Content-Type": "application/json",
+            # Groq sits behind Cloudflare, which blocks the default
+            # "Python-urllib/x.y" UA with a 403 (error 1010). Send a plain UA.
+            "User-Agent": "Relay/1.0",
         },
     )
     try:
-        with urlopen(req, timeout=30) as resp:
+        with urlopen(req, timeout=30, context=_SSL_CTX) as resp:
             result = json.loads(resp.read())
             return result["choices"][0]["message"]["content"]
     except Exception:
