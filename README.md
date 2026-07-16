@@ -7,7 +7,7 @@ your Anthropic claude.ai subscription and DeepSeek API credits through a local
 One click switches everything. Quit the app and everything reverts.
 
 <p align="center">
-  <img src="docs/screenshot.png" width="360" alt="Relay menu dropdown showing routing toggle, proxy controls, and DeepSeek settings">
+  <img src="docs/screenshot-menu.png" width="360" alt="Relay menu dropdown showing routing toggle, proxy controls, and DeepSeek settings">
   &nbsp;&nbsp;
   <img src="docs/architecture.svg" width="580" alt="Relay architecture: RelayKit is the pure-Swift core, the menu bar app sits on top, settings files and LiteLLM proxy below">
 </p>
