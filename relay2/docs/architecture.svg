@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 460" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#f2f6fc"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect x="3" y="3" width="914" height="454" rx="16" fill="url(#bg)" stroke="#e2e8f0"/>
+
+  <text x="40" y="50" font-size="23" font-weight="700" fill="#0f172a">Architecture</text>
+  <text x="40" y="77" font-size="13.5" fill="#64748b">One pure-Swift core, <tspan font-weight="700" fill="#475569">RelayKit</tspan>, behind the menu bar app. No AppKit code touches settings, Keychain, or the proxy.</text>
+
+  <!-- Relay.app -->
+  <rect x="310" y="96" width="300" height="56" rx="11" fill="#ffffff" stroke="#c9d8ee"/>
+  <rect x="310" y="96" width="300" height="4" rx="2" fill="#0a84ff"/>
+  <text x="320" y="122" font-size="14.5" font-weight="700" fill="#0f172a">Relay.app</text>
+  <text x="320" y="141" font-size="12" fill="#64748b">NSStatusItem + NSMenu · AppKit</text>
+
+  <line x1="460" y1="152" x2="460" y2="184" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- RelayKit container -->
+  <rect x="40" y="186" width="840" height="140" rx="14" fill="#f6faff" stroke="#cfe0f5"/>
+  <text x="62" y="214" font-size="14" font-weight="700" fill="#0f172a">RelayKit <tspan font-weight="500" fill="#64748b">— pure Swift package · zero UI · 49 unit tests</tspan></text>
+
+  <!-- Row 1 -->
+  <g font-size="12" font-weight="600" fill="#0f172a">
+    <rect x="62"  y="232" width="180" height="38" rx="8" fill="#ffffff" stroke="#d7e3f2"/>
+    <text x="152" y="255" text-anchor="middle">KeychainStore</text>
+    <rect x="254" y="232" width="180" height="38" rx="8" fill="#fff8e6" stroke="#e6cc7c" stroke-width="1.2"/>
+    <text x="344" y="255" text-anchor="middle" font-size="11.5">ToggleService</text>
+    <rect x="446" y="232" width="196" height="38" rx="8" fill="#ffffff" stroke="#d7e3f2"/>
+    <text x="544" y="255" text-anchor="middle">ClaudeSettingsWriter</text>
+    <rect x="654" y="232" width="210" height="38" rx="8" fill="#ffffff" stroke="#d7e3f2"/>
+    <text x="759" y="255" text-anchor="middle">VSCodeSettingsWriter</text>
+  </g>
+
+  <!-- Row 2 -->
+  <g font-size="12" font-weight="600" fill="#0f172a">
+    <rect x="62"  y="280" width="220" height="38" rx="8" fill="#ffffff" stroke="#d7e3f2"/>
+    <text x="172" y="303" text-anchor="middle">ProxyProcessManager</text>
+    <rect x="294" y="280" width="180" height="38" rx="8" fill="#ffffff" stroke="#d7e3f2"/>
+    <text x="384" y="303" text-anchor="middle">VenvInstaller</text>
+    <rect x="486" y="280" width="160" height="38" rx="8" fill="#ffffff" stroke="#d7e3f2"/>
+    <text x="566" y="303" text-anchor="middle">PythonProbe</text>
+    <rect x="658" y="280" width="180" height="38" rx="8" fill="#ffffff" stroke="#d7e3f2"/>
+    <text x="748" y="303" text-anchor="middle">ProxyLogStore</text>
+  </g>
+
+  <!-- Arrows down -->
+  <line x1="152" y1="326" x2="152" y2="368" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="172" y1="326" x2="172" y2="408" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="544" y1="326" x2="544" y2="368" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="759" y1="326" x2="759" y2="368" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="384" y1="326" x2="384" y2="408" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Externals row -->
+  <g>
+    <!-- Keychain -->
+    <rect x="64"  y="370" width="176" height="56" rx="10" fill="#ffffff" stroke="#c9d8ee"/>
+    <text x="152" y="394" font-size="12.5" font-weight="700" fill="#0f172a" text-anchor="middle">macOS Keychain</text>
+    <text x="152" y="413" font-size="10.5" fill="#64748b" text-anchor="middle">API key + master key</text>
+
+    <!-- Claude settings -->
+    <rect x="464" y="370" width="160" height="56" rx="10" fill="#ffffff" stroke="#c9d8ee"/>
+    <text x="544" y="394" font-size="12.5" font-weight="700" fill="#0f172a" text-anchor="middle">~/.claude/settings.json</text>
+    <text x="544" y="413" font-size="10.5" fill="#64748b" text-anchor="middle">env vars · JSON merge</text>
+
+    <!-- VS Code settings -->
+    <rect x="644" y="370" width="230" height="56" rx="10" fill="#ffffff" stroke="#c9d8ee"/>
+    <text x="759" y="394" font-size="12" font-weight="700" fill="#0f172a" text-anchor="middle">VS Code settings.json</text>
+    <text x="759" y="413" font-size="10.5" fill="#64748b" text-anchor="middle">JSONC · textual patch</text>
+  </g>
+
+  <!-- LiteLLM + Python row -->
+  <g>
+    <rect x="62"  y="410" width="220" height="40" rx="8" fill="#fff8e6" stroke="#e6cc7c" stroke-width="1.2"/>
+    <text x="172" y="435" font-size="12" font-weight="700" fill="#8a6d00" text-anchor="middle">LiteLLM Proxy (port 4000)</text>
+
+    <rect x="296" y="410" width="176" height="40" rx="8" fill="#ffffff" stroke="#d7e3f2"/>
+    <text x="384" y="435" font-size="12" font-weight="600" fill="#0f172a" text-anchor="middle">Python 3.11–3.13</text>
+  </g>
+</svg>
