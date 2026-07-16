@@ -162,6 +162,7 @@ final class SettingsWriterTests: XCTestCase {
         XCTAssertTrue(yaml.contains("model: deepseek/deepseek-v4-pro"))
         XCTAssertTrue(yaml.contains("api_key: os.environ/DEEPSEEK_API_KEY"))
         XCTAssertTrue(yaml.contains("master_key: os.environ/LITELLM_MASTER_KEY"))
+        XCTAssertTrue(yaml.contains("callbacks: [\"prometheus\"]"))
         try writer.write(LiteLLMConfig(deepSeekModelString: "deepseek/deepseek-v4-pro"))
         XCTAssertTrue(FileManager.default.fileExists(atPath: writer.configURL.path))
     }

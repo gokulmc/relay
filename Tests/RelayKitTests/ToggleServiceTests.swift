@@ -106,6 +106,67 @@ final class ToggleServiceTests: XCTestCase {
         XCTAssertFalse(claudeSettings.contains("ANTHROPIC_BASE_URL"))
     }
 
+    func testSetDeepSeekModelSavesPreferenceWithoutRunningProxy() async throws {
+        let service = await makeService()
+        try await service.setDeepSeekModel("deepseek/deepseek-v4-flash")
+        XCTAssertEqual(service.preferences().deepSeekModelString, "deepseek/deepseek-v4-flash")
+        XCTAssertEqual(service.proxy.status, .stopped)
+    }
+
+    func testSetDeepSeekModelRestartsRunningProxyWithNewModel() async throws {
+        guard keychain.write("sk-test-deepseek", for: .deepSeekAPIKey) else {
+            throw XCTSkip("Keychain write unavailable in this environment")
+        }
+
+        try seedFakeLiteLLM()
+        try seedSettingsFiles()
+
+        let service = await makeService(healthAlwaysOK: true)
+        _ = try await service.switchToDeepSeek()
+        XCTAssertEqual(service.proxy.status, .running)
+
+        try await service.setDeepSeekModel("deepseek/deepseek-v4-flash")
+
+        XCTAssertEqual(service.preferences().deepSeekModelString, "deepseek/deepseek-v4-flash")
+        XCTAssertEqual(service.proxy.status, .running)
+
+        let config = try String(contentsOf: tempDir.appendingPathComponent("litellm-config.yaml"), encoding: .utf8)
+        XCTAssertTrue(config.contains("deepseek/deepseek-v4-flash"))
+    }
+
+    func testUpdateDeepSeekSettingsChangesPortAndRestartsRunningProxyWithNewBaseURL() async throws {
+        guard keychain.write("sk-test-deepseek", for: .deepSeekAPIKey) else {
+            throw XCTSkip("Keychain write unavailable in this environment")
+        }
+
+        try seedFakeLiteLLM()
+        try seedSettingsFiles()
+
+        let service = await makeService(healthAlwaysOK: true)
+        _ = try await service.switchToDeepSeek()
+        XCTAssertEqual(service.proxy.status, .running)
+
+        try await service.updateDeepSeekSettings(model: "deepseek/deepseek-v4-flash", port: 4010)
+
+        XCTAssertEqual(service.preferences().proxyPort, 4010)
+        XCTAssertEqual(service.preferences().deepSeekModelString, "deepseek/deepseek-v4-flash")
+        XCTAssertEqual(service.proxy.status, .running)
+        XCTAssertEqual(service.proxy.currentPort, 4010)
+
+        let claudeSettings = try String(
+            contentsOf: tempDir.appendingPathComponent("claude-settings.json"),
+            encoding: .utf8
+        )
+        XCTAssertTrue(claudeSettings.contains("127.0.0.1:4010"))
+    }
+
+    func testUpdateDeepSeekSettingsSavesPortWithoutRunningProxy() async throws {
+        let service = await makeService()
+        try await service.updateDeepSeekSettings(model: "deepseek/deepseek-v4-pro", port: 4020)
+        XCTAssertEqual(service.preferences().proxyPort, 4020)
+        XCTAssertEqual(service.proxy.status, .stopped)
+    }
+
     // MARK: - Helpers
 
     private func makeService(healthAlwaysOK: Bool = true) async -> ToggleService {

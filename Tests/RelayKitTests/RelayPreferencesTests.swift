@@ -93,4 +93,47 @@ final class RelayPreferencesTests: XCTestCase {
         let loaded = store2.load()
         XCTAssertEqual(loaded.deepSeekModelString, "deepseek/deepseek-v7-ultra")
     }
+
+    func testDefaultModelOptionsIncludesProAndFlash() {
+        let prefs = RelayPreferences()
+        XCTAssertEqual(prefs.deepSeekModelOptions, ["deepseek/deepseek-v4-pro", "deepseek/deepseek-v4-flash"])
+    }
+
+    func testDecodingPreUpgradeJSONWithoutModelOptionsFillsInDefaults() throws {
+        // Simulates a preferences.json written before deepSeekModelOptions existed.
+        let url = tempDir.appendingPathComponent("preferences.json")
+        try #"{"deepSeekModelString":"deepseek/deepseek-v7-ultra"}"#
+            .write(to: url, atomically: true, encoding: .utf8)
+
+        let store = RelayPreferencesStore(fileURL: url)
+        let loaded = store.load()
+        XCTAssertEqual(loaded.deepSeekModelString, "deepseek/deepseek-v7-ultra")
+        XCTAssertEqual(loaded.deepSeekModelOptions, AppSupport.defaultModelOptions)
+    }
+
+    func testDefaultProxyPortIs4000() {
+        XCTAssertEqual(RelayPreferences().proxyPort, 4000)
+    }
+
+    func testDecodingPreUpgradeJSONWithoutProxyPortFillsInDefault() throws {
+        // Simulates a preferences.json written before proxyPort existed.
+        let url = tempDir.appendingPathComponent("preferences.json")
+        try #"{"deepSeekModelString":"deepseek/deepseek-v4-pro","deepSeekModelOptions":["deepseek/deepseek-v4-pro"]}"#
+            .write(to: url, atomically: true, encoding: .utf8)
+
+        let store = RelayPreferencesStore(fileURL: url)
+        let loaded = store.load()
+        XCTAssertEqual(loaded.proxyPort, AppSupport.defaultPort)
+    }
+
+    func testSaveAndLoadRoundTripsCustomPort() throws {
+        let url = tempDir.appendingPathComponent("preferences.json")
+        let store = RelayPreferencesStore(fileURL: url)
+
+        var prefs = RelayPreferences()
+        prefs.proxyPort = 4010
+        try store.save(prefs)
+
+        XCTAssertEqual(store.load().proxyPort, 4010)
+    }
 }

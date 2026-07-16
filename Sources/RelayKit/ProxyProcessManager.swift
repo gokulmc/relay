@@ -11,7 +11,7 @@ public enum ProxyStatus: Equatable, Sendable {
         switch self {
         case .stopped: return "Stopped"
         case .starting: return "Starting…"
-        case .running: return "Running (port \(AppSupport.defaultPort))"
+        case .running: return "Running"
         case .failed(let reason): return "Failed — \(reason)"
         }
     }
@@ -22,7 +22,6 @@ public final class ProxyProcessManager: @unchecked Sendable {
     public typealias PathForPID = @Sendable (Int32) -> String?
 
     private let appSupportDir: URL
-    private let port: Int
     private let logStore: ProxyLogStore
     private let healthCheck: HealthCheck
     private let pathForPID: PathForPID
@@ -57,7 +56,6 @@ public final class ProxyProcessManager: @unchecked Sendable {
         healthTimeout: TimeInterval = 10
     ) {
         self.appSupportDir = appSupportDir
-        self.port = port
         self.logStore = logStore
         self.healthCheck = healthCheck ?? { port in
             await ProxyHealthChecker().check(port: port)
@@ -67,9 +65,18 @@ public final class ProxyProcessManager: @unchecked Sendable {
         }
         self.fileManager = fileManager
         self.healthTimeout = healthTimeout
+        state.port = port
     }
 
     public var logs: ProxyLogStore { logStore }
+
+    public var currentPort: Int { state.port }
+
+    /// Changes the port used by the next `start()` call. Has no effect on an
+    /// already-running process — call before starting, not while running.
+    public func updatePort(_ newPort: Int) {
+        state.port = newPort
+    }
 
     /// Reconcile pidfile + live process + health at app launch. Never auto-starts.
     @discardableResult
@@ -117,6 +124,7 @@ public final class ProxyProcessManager: @unchecked Sendable {
 
         setStatus(.starting)
         state.intentionalStop = false
+        let port = state.port
         logStore.append("Starting LiteLLM on port \(port)…")
 
         let process = Process()
@@ -217,7 +225,7 @@ public final class ProxyProcessManager: @unchecked Sendable {
     private func waitForHealthy(timeout: TimeInterval) async -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
-            if await healthCheck(port) { return true }
+            if await healthCheck(state.port) { return true }
             try? await Task.sleep(nanoseconds: 500_000_000)
         }
         return false
@@ -255,10 +263,16 @@ private final class ProxyState: @unchecked Sendable {
     private var _process: Process?
     private var _adoptedPID: Int32?
     private var _intentionalStop = false
+    private var _port: Int = AppSupport.defaultPort
 
     var status: ProxyStatus {
         get { lock.lock(); defer { lock.unlock() }; return _status }
         set { lock.lock(); _status = newValue; lock.unlock() }
+    }
+
+    var port: Int {
+        get { lock.lock(); defer { lock.unlock() }; return _port }
+        set { lock.lock(); _port = newValue; lock.unlock() }
     }
 
     var process: Process? {

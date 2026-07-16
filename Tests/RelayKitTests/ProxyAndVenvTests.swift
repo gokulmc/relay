@@ -133,6 +133,41 @@ final class ProxyAndVenvTests: XCTestCase {
         XCTAssertFalse(dead)
     }
 
+    func testAppSupportBaseURLReflectsGivenPort() {
+        XCTAssertEqual(AppSupport.baseURL(), "http://127.0.0.1:4000")
+        XCTAssertEqual(AppSupport.baseURL(port: 4010), "http://127.0.0.1:4010")
+    }
+
+    func testProxyProcessManagerUpdatePortChangesStartArguments() async throws {
+        let server = TinyHTTPServer()
+        let realPort = try server.start(statusCode: 200, body: "ok")
+        defer { server.stop() }
+
+        let bin = tempDir.appendingPathComponent("venv/bin", isDirectory: true)
+        try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
+        let litellm = bin.appendingPathComponent("litellm")
+        try "#!/bin/sh\nwhile true; do sleep 60; done\n".write(to: litellm, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: litellm.path)
+        try "model_list: []".write(
+            to: tempDir.appendingPathComponent("litellm-config.yaml"), atomically: true, encoding: .utf8
+        )
+
+        let manager = ProxyProcessManager(
+            appSupportDir: tempDir,
+            port: 9999,
+            healthCheck: { port in port == realPort },
+            pathForPID: { _ in nil }
+        )
+        XCTAssertEqual(manager.currentPort, 9999)
+
+        manager.updatePort(realPort)
+        XCTAssertEqual(manager.currentPort, realPort)
+
+        try await manager.start(environment: [:])
+        XCTAssertEqual(manager.status, .running)
+        manager.stop()
+    }
+
     func testKeychainStoreRoundTrip() throws {
         let suffix = "test-\(UUID().uuidString)"
         let store = KeychainStore(serviceSuffix: suffix)
