@@ -1,0 +1,247 @@
+<!-- @dsCard group="Relay" name="Settings panels" subtitle="Groq Vision + DeepSeek — empty & key-present states" width="760" height="620" -->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    background: linear-gradient(150deg, #a5aec0 0%, #77839a 100%);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 22px; -webkit-font-smoothing: antialiased;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 336px);
+    gap: 18px 20px;
+  }
+
+  .col-head {
+    grid-column: span 2;
+    display: grid;
+    grid-template-columns: repeat(2, 336px);
+    gap: 18px 20px;
+    margin-bottom: 2px;
+  }
+  .app-name {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.6px; color: rgba(50,55,70,0.55);
+  }
+
+  .caption {
+    font-size: 10.5px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px; color: rgba(50,55,70,0.5);
+    margin-bottom: 6px; padding-left: 2px;
+  }
+
+  .panel {
+    width: 336px; border-radius: 13px; padding: 16px 18px 14px;
+    background: rgba(32,32,36,0.96); color: #f2f2f4;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.32), inset 0 0 0 0.5px rgba(255,255,255,0.12);
+  }
+
+  .title {
+    font-size: 13px; font-weight: 600; color: #f2f2f4; margin-bottom: 14px;
+  }
+
+  .field { margin-bottom: 12px; }
+  .field:last-of-type { margin-bottom: 0; }
+
+  .label {
+    font-size: 10.5px; color: rgba(255,255,255,0.5);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 5px;
+  }
+
+  .row { display: flex; align-items: center; gap: 8px; }
+
+  .input {
+    flex: 1;
+    background: rgba(255,255,255,0.06);
+    box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.14);
+    border-radius: 6px;
+    height: 26px;
+    padding: 0 9px;
+    font-size: 12.5px;
+    display: flex;
+    align-items: center;
+    color: #f2f2f4;
+  }
+  .input.placeholder { color: rgba(255,255,255,0.32); }
+  .input.dots { letter-spacing: 2px; font-size: 13px; color: rgba(255,255,255,0.85); }
+  .input .hint { letter-spacing: normal; font-size: 11px; color: rgba(255,255,255,0.4); margin-left: 6px; }
+
+  .input.small { flex: none; width: 78px; font-variant-numeric: tabular-nums; }
+
+  .dropdown {
+    flex: 1;
+    background: rgba(255,255,255,0.06);
+    box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.14);
+    border-radius: 6px;
+    height: 26px;
+    padding: 0 9px;
+    font-size: 12.5px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #f2f2f4;
+  }
+  .dropdown .chev { color: rgba(255,255,255,0.4); font-size: 9px; }
+
+  .btn-paste {
+    flex: none;
+    font-size: 11px; font-weight: 500;
+    color: rgba(255,255,255,0.75);
+    background: rgba(255,255,255,0.1);
+    border-radius: 6px;
+    height: 24px; padding: 0 10px;
+    display: flex; align-items: center; justify-content: center;
+    white-space: nowrap;
+  }
+
+  .help {
+    font-size: 11.5px; color: rgba(255,255,255,0.45);
+    margin-top: 6px;
+  }
+
+  .actions {
+    display: flex; justify-content: flex-end; gap: 8px;
+    margin-top: 16px;
+  }
+  .btn {
+    font-size: 12.5px; font-weight: 500;
+    border-radius: 6px; height: 26px; padding: 0 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .btn-secondary { background: rgba(255,255,255,0.1); color: #f2f2f4; }
+  .btn-primary { background: #0a84ff; color: #ffffff; font-weight: 600; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 90px; gap: 10px; }
+</style>
+
+<div class="grid">
+  <div class="col-head">
+    <div class="app-name">Groq Vision Settings</div>
+    <div class="app-name">DeepSeek Settings</div>
+  </div>
+
+  <!-- Row 1: no key state -->
+  <div>
+    <div class="caption">State — no key</div>
+    <div class="panel">
+      <div class="title">Groq Vision Settings</div>
+
+      <div class="field">
+        <div class="label">API Key</div>
+        <div class="row">
+          <div class="input placeholder">Groq API key</div>
+          <div class="btn-paste">Paste</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="label">Vision model</div>
+        <div class="input">meta-llama/llama-4-scout-17b-16e-instruct</div>
+      </div>
+
+      <div class="help">Used for describing screenshots and images.</div>
+
+      <div class="actions">
+        <div class="btn btn-secondary">Cancel</div>
+        <div class="btn btn-primary">Save</div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="caption">State — no key</div>
+    <div class="panel">
+      <div class="title">DeepSeek Settings</div>
+
+      <div class="field">
+        <div class="label">API Key</div>
+        <div class="row">
+          <div class="input placeholder">DeepSeek API key</div>
+          <div class="btn-paste">Paste</div>
+        </div>
+      </div>
+
+      <div class="field two-col">
+        <div>
+          <div class="label">Model</div>
+          <div class="dropdown">deepseek-v4-pro <span class="chev">&#9662;</span></div>
+        </div>
+        <div>
+          <div class="label">Proxy Port</div>
+          <div class="input small">4000</div>
+        </div>
+      </div>
+
+      <div class="help">Routes Claude Code traffic through a local LiteLLM proxy.</div>
+
+      <div class="actions">
+        <div class="btn btn-secondary">Cancel</div>
+        <div class="btn btn-primary">Save</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2: key present state -->
+  <div>
+    <div class="caption">State — key saved</div>
+    <div class="panel">
+      <div class="title">Groq Vision Settings</div>
+
+      <div class="field">
+        <div class="label">API Key</div>
+        <div class="row">
+          <div class="input dots">•••••••• <span class="hint">(leave blank to keep)</span></div>
+          <div class="btn-paste">Paste</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="label">Vision model</div>
+        <div class="input">meta-llama/llama-4-scout-17b-16e-instruct</div>
+      </div>
+
+      <div class="help">Leave blank to keep the existing one.</div>
+
+      <div class="actions">
+        <div class="btn btn-secondary">Cancel</div>
+        <div class="btn btn-primary">Save</div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="caption">State — key saved</div>
+    <div class="panel">
+      <div class="title">DeepSeek Settings</div>
+
+      <div class="field">
+        <div class="label">API Key</div>
+        <div class="row">
+          <div class="input dots">•••••••• <span class="hint">(leave blank to keep)</span></div>
+          <div class="btn-paste">Paste</div>
+        </div>
+      </div>
+
+      <div class="field two-col">
+        <div>
+          <div class="label">Model</div>
+          <div class="dropdown">deepseek-v4-pro <span class="chev">&#9662;</span></div>
+        </div>
+        <div>
+          <div class="label">Proxy Port</div>
+          <div class="input small">4000</div>
+        </div>
+      </div>
+
+      <div class="help">Leave blank to keep the existing one.</div>
+
+      <div class="actions">
+        <div class="btn btn-secondary">Cancel</div>
+        <div class="btn btn-primary">Save</div>
+      </div>
+    </div>
+  </div>
+</div>

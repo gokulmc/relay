@@ -167,6 +167,12 @@ final class SettingsWriterTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: writer.configURL.path))
     }
 
+    func testLiteLLMConfigWriterRendersGroqCallbackWhenConfigured() throws {
+        let writer = LiteLLMConfigWriter(directory: tempDir)
+        let yaml = writer.render(LiteLLMConfig(deepSeekModelString: "deepseek/deepseek-v4-pro", groqConfigured: true))
+        XCTAssertTrue(yaml.contains("callbacks: [\"prometheus\", \"groq_vision_callback.proxy_handler_instance\"]"))
+    }
+
     func testRoutingStateStoreRoundTrip() throws {
         let url = tempDir.appendingPathComponent("routing-state.json")
         let store = RoutingStateStore(fileURL: url)
