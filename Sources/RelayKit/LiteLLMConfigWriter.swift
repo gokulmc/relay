@@ -5,17 +5,20 @@ public struct LiteLLMConfig: Equatable, Sendable {
     public var deepSeekAPIKeyEnvVar: String
     public var masterKeyEnvVar: String
     public var port: Int
+    public var groqConfigured: Bool
 
     public init(
         deepSeekModelString: String,
         deepSeekAPIKeyEnvVar: String = AppSupport.deepSeekAPIKeyEnvVar,
         masterKeyEnvVar: String = AppSupport.masterKeyEnvVar,
-        port: Int = AppSupport.defaultPort
+        port: Int = AppSupport.defaultPort,
+        groqConfigured: Bool = false
     ) {
         self.deepSeekModelString = deepSeekModelString
         self.deepSeekAPIKeyEnvVar = deepSeekAPIKeyEnvVar
         self.masterKeyEnvVar = masterKeyEnvVar
         self.port = port
+        self.groqConfigured = groqConfigured
     }
 }
 
@@ -31,7 +34,13 @@ public struct LiteLLMConfigWriter {
     }
 
     public func render(_ config: LiteLLMConfig) -> String {
-        """
+        // The Groq vision callback (image → text) rides alongside prometheus in the
+        // callbacks list. `groq_vision_callback` must be importable — the app installs
+        // it next to this config and puts that dir on PYTHONPATH when starting the proxy.
+        let callbacks = config.groqConfigured
+            ? "[\"prometheus\", \"\(AppSupport.groqVisionCallbackModule).proxy_handler_instance\"]"
+            : "[\"prometheus\"]"
+        return """
         model_list:
           - model_name: "*"
             litellm_params:
@@ -43,6 +52,8 @@ public struct LiteLLMConfigWriter {
 
         litellm_settings:
           drop_params: true
+          callbacks: \(callbacks)
+          require_auth_for_metrics_endpoint: false
 
         """
     }

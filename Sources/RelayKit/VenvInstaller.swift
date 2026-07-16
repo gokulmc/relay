@@ -28,7 +28,7 @@ public enum VenvInstallError: Error, CustomStringConvertible, Equatable {
 }
 
 public struct VenvInstaller {
-    private let appSupportDir: URL
+    public let appSupportDir: URL
     private let runner: any ProcessRunning
     private let probe: PythonProbe
     private let fileManager: FileManager
@@ -47,6 +47,10 @@ public struct VenvInstaller {
 
     public var venvURL: URL {
         appSupportDir.appendingPathComponent("venv", isDirectory: true)
+    }
+
+    public var callbackURL: URL {
+        appSupportDir.appendingPathComponent("\(AppSupport.groqVisionCallbackModule).py")
     }
 
     public var litellmURL: URL {
@@ -71,6 +75,16 @@ public struct VenvInstaller {
         }
         try await install(force: true)
         return .installed
+    }
+
+    /// Copy the Groq vision callback .py file from `sourceURL` (a bundled resource)
+    /// to the app support directory so LiteLLM can import it.
+    public func installCallback(from sourceURL: URL) throws {
+        try fileManager.createDirectory(at: appSupportDir, withIntermediateDirectories: true)
+        if fileManager.fileExists(atPath: callbackURL.path) {
+            try fileManager.removeItem(at: callbackURL)
+        }
+        try fileManager.copyItem(at: sourceURL, to: callbackURL)
     }
 
     private func isHealthy() async -> Bool {
@@ -120,9 +134,12 @@ public struct VenvInstaller {
             workingDirectory: nil
         )
 
+        // prometheus_client isn't bundled with litellm[proxy] — without it, enabling the
+        // prometheus callback (for usage tracking) crashes the proxy on startup with
+        // ModuleNotFoundError.
         let pipResult = try await runner.run(
             command: pipURL.path,
-            arguments: ["install", "litellm[proxy]"],
+            arguments: ["install", "litellm[proxy]", "prometheus-client"],
             environment: nil,
             workingDirectory: nil
         )

@@ -87,12 +87,59 @@ public final class ToggleService: @unchecked Sendable {
         !(keychain.read(.deepSeekAPIKey) ?? "").isEmpty
     }
 
+    public func deepSeekAPIKey() -> String? {
+        keychain.read(.deepSeekAPIKey)
+    }
+
     public func setDeepSeekAPIKey(_ value: String) {
         if value.isEmpty {
             keychain.delete(.deepSeekAPIKey)
         } else {
             _ = keychain.write(value, for: .deepSeekAPIKey)
         }
+    }
+
+    // MARK: - Groq vision
+
+    public func hasGroqAPIKey() -> Bool {
+        !(keychain.read(.groqAPIKey) ?? "").isEmpty
+    }
+
+    public func getGroqAPIKey() -> String? {
+        keychain.read(.groqAPIKey)
+    }
+
+    public func setGroqAPIKey(_ value: String) {
+        if value.isEmpty {
+            keychain.delete(.groqAPIKey)
+        } else {
+            _ = keychain.write(value, for: .groqAPIKey)
+        }
+    }
+
+    public func groqModelString() -> String {
+        preferencesStore.load().groqModelString
+    }
+
+    /// Ensure the Groq vision callback Python file is installed in the app support
+    /// directory so LiteLLM can import it. Caller provides the bundled resource URL.
+    public func installGroqCallback(from sourceURL: URL) throws {
+        try venvInstaller.installCallback(from: sourceURL)
+    }
+
+    /// Builds the proxy subprocess environment, adding Groq vision vars (+ PYTHONPATH so
+    /// the callback module is importable) when a Groq key is configured.
+    private func proxyEnvironment(apiKey: String, masterKey: String, prefs: RelayPreferences) -> [String: String] {
+        var env: [String: String] = [
+            AppSupport.deepSeekAPIKeyEnvVar: apiKey,
+            AppSupport.masterKeyEnvVar: masterKey,
+        ]
+        if hasGroqAPIKey(), let groqKey = keychain.read(.groqAPIKey) {
+            env[AppSupport.groqAPIKeyEnvVar] = groqKey
+            env[AppSupport.groqVisionModelEnvVar] = prefs.groqModelString
+            env["PYTHONPATH"] = venvInstaller.appSupportDir.path
+        }
+        return env
     }
 
     public func switchToDeepSeek() async throws -> ToggleResult {
@@ -110,22 +157,26 @@ public final class ToggleService: @unchecked Sendable {
 
         let masterKey = ensureMasterKey()
         let prefs = preferencesStore.load()
+        proxyManager.updatePort(prefs.proxyPort)
 
         do {
             try configWriter.write(
-                LiteLLMConfig(deepSeekModelString: prefs.deepSeekModelString)
+                LiteLLMConfig(
+                    deepSeekModelString: prefs.deepSeekModelString,
+                    port: prefs.proxyPort,
+                    groqConfigured: hasGroqAPIKey()
+                )
             )
-            try claudeWriter.enableProxy(baseURL: AppSupport.baseURL, masterKey: masterKey)
-            try vscodeWriter.enableProxy(baseURL: AppSupport.baseURL, masterKey: masterKey)
+            try claudeWriter.enableProxy(baseURL: AppSupport.baseURL(port: prefs.proxyPort), masterKey: masterKey)
+            try vscodeWriter.enableProxy(baseURL: AppSupport.baseURL(port: prefs.proxyPort), masterKey: masterKey)
         } catch {
             throw ToggleError.settings(error.localizedDescription)
         }
 
         do {
-            try await proxyManager.start(environment: [
-                AppSupport.deepSeekAPIKeyEnvVar: apiKey,
-                AppSupport.masterKeyEnvVar: masterKey,
-            ])
+            try await proxyManager.start(
+                environment: proxyEnvironment(apiKey: apiKey, masterKey: masterKey, prefs: prefs)
+            )
         } catch {
             // Roll back settings so we don't leave Claude pointed at a dead proxy.
             try? claudeWriter.disableProxy()
@@ -166,15 +217,60 @@ public final class ToggleService: @unchecked Sendable {
         _ = try await venvInstaller.ensureReady()
         let masterKey = ensureMasterKey()
         let prefs = preferencesStore.load()
-        try configWriter.write(LiteLLMConfig(deepSeekModelString: prefs.deepSeekModelString))
-        try await proxyManager.start(environment: [
-            AppSupport.deepSeekAPIKeyEnvVar: apiKey,
-            AppSupport.masterKeyEnvVar: masterKey,
-        ])
+        proxyManager.updatePort(prefs.proxyPort)
+        try configWriter.write(
+            LiteLLMConfig(
+                deepSeekModelString: prefs.deepSeekModelString,
+                port: prefs.proxyPort,
+                groqConfigured: hasGroqAPIKey()
+            )
+        )
+        try await proxyManager.start(
+            environment: proxyEnvironment(apiKey: apiKey, masterKey: masterKey, prefs: prefs)
+        )
     }
 
     public func stopProxyManually() {
         proxyManager.stop()
+    }
+
+    /// Saves the chosen model (keeping the current port) and, if the proxy is running,
+    /// restarts it so the change takes effect immediately. Used by the quick-swap menu.
+    public func setDeepSeekModel(_ model: String) async throws {
+        var prefs = preferencesStore.load()
+        prefs.deepSeekModelString = model
+        try preferencesStore.save(prefs)
+        try await restartRunningProxyIfNeeded(model: model, port: prefs.proxyPort)
+    }
+
+    /// Saves model + port together and, if the proxy is running, restarts it on the
+    /// new port with updated Claude/VS Code settings. Used by the full settings panel.
+    public func updateDeepSeekSettings(model: String, port: Int) async throws {
+        var prefs = preferencesStore.load()
+        prefs.deepSeekModelString = model
+        prefs.proxyPort = port
+        try preferencesStore.save(prefs)
+        try await restartRunningProxyIfNeeded(model: model, port: port)
+    }
+
+    /// Rewrites the config for the given model/port and restarts the proxy — but only
+    /// if it's already running. A no-op if the proxy is stopped (the new settings will
+    /// simply be honored on the next manual start).
+    private func restartRunningProxyIfNeeded(model: String, port: Int) async throws {
+        guard case .running = proxyManager.status else { return }
+        guard let apiKey = keychain.read(.deepSeekAPIKey), !apiKey.isEmpty else { return }
+        let masterKey = ensureMasterKey()
+        let prefs = preferencesStore.load()
+        proxyManager.updatePort(port)
+        try configWriter.write(
+            LiteLLMConfig(deepSeekModelString: model, port: port, groqConfigured: hasGroqAPIKey())
+        )
+        proxyManager.stop()
+        try await proxyManager.start(
+            environment: proxyEnvironment(apiKey: apiKey, masterKey: masterKey, prefs: prefs)
+        )
+        try claudeWriter.enableProxy(baseURL: AppSupport.baseURL(port: port), masterKey: masterKey)
+        try vscodeWriter.enableProxy(baseURL: AppSupport.baseURL(port: port), masterKey: masterKey)
     }
 
     public func repairEnvironment() async throws {

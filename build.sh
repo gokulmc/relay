@@ -26,6 +26,11 @@ cp "Support/Info.plist" "${APP_BUNDLE}/Contents/Info.plist"
 if [ -f "Support/AppIcon.icns" ]; then
     cp "Support/AppIcon.icns" "${APP_BUNDLE}/Contents/Resources/AppIcon.icns"
 fi
+# Groq vision callback — the app copies this out of its bundle into the LiteLLM
+# app-support dir at launch so the proxy can import it.
+if [ -f "Support/groq_vision_callback.py" ]; then
+    cp "Support/groq_vision_callback.py" "${APP_BUNDLE}/Contents/Resources/groq_vision_callback.py"
+fi
 
 if security find-certificate -c "${SIGN_IDENTITY}" >/dev/null 2>&1; then
     echo "==> Code signing (${SIGN_IDENTITY})"

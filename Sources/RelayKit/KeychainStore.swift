@@ -50,12 +50,14 @@ private func deleteSecret(service: String) {
 public enum RelayKeychainKey {
     case deepSeekAPIKey
     case liteLLMMasterKey
+    case groqAPIKey
 
     public func service(suffix: String = "") -> String {
         let base: String
         switch self {
         case .deepSeekAPIKey: base = "com.gokul.relay.deepseek-api-key"
         case .liteLLMMasterKey: base = "com.gokul.relay.litellm-master-key"
+        case .groqAPIKey: base = "com.gokul.relay.groq-api-key"
         }
         return suffix.isEmpty ? base : "\(base).\(suffix)"
     }
