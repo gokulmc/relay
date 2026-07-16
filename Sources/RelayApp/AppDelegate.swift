@@ -76,7 +76,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        // Revert routing so open sessions don't point at a dead proxy on next launch.
         toggleService.stopProxyManually()
+        try? toggleService.revertToClaude()
     }
 
     func menuWillOpen(_ menu: NSMenu) {

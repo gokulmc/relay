@@ -151,6 +151,14 @@ public final class ToggleService: @unchecked Sendable {
         return ToggleResult(mode: .claude, caveatMessage: ToggleResult.restartCaveat)
     }
 
+    /// Revert routing to Claude without throwing — safe to call during app termination.
+    public func revertToClaude() throws {
+        proxyManager.stop()
+        try? claudeWriter.disableProxy()
+        try? vscodeWriter.disableProxy()
+        try routingStore.save(RoutingState(mode: .claude))
+    }
+
     public func startProxyManually() async throws {
         guard let apiKey = keychain.read(.deepSeekAPIKey), !apiKey.isEmpty else {
             throw ToggleError.missingDeepSeekAPIKey
