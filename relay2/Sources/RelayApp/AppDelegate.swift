@@ -459,13 +459,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                     for: provider,
                     isActive: isActive,
                     hasKey: self.toggleService.hasAPIKey(for: provider)
-                )
-            ) { [weak self] apiKey, model in
+                ),
+                storedAPIKey: self.toggleService.apiKey(for: provider)
+            ) { [weak self] apiKey, model, refreshedOptions in
                 guard let self else { return }
                 if let apiKey {
                     self.toggleService.setAPIKey(apiKey, for: provider)
                 }
                 self.refreshKeyCache()
+                if let refreshedOptions {
+                    var updated = self.toggleService.preferences()
+                    updated.providerModelOptions[provider] = refreshedOptions
+                    try? self.toggleService.savePreferences(updated)
+                }
                 Task { await self.performSelectModel(model, for: provider) }
             }
         }

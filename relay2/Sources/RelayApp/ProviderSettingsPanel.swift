@@ -12,7 +12,8 @@ enum ProviderSettingsPanel {
         modelString: String,
         modelOptions: [String],
         usageLine: String,
-        onSave: @escaping (_ apiKey: String?, _ modelString: String) -> Void
+        storedAPIKey: String?,
+        onSave: @escaping (_ apiKey: String?, _ modelString: String, _ refreshedOptions: [String]?) -> Void
     ) {
         activateApp()
 
@@ -28,28 +29,30 @@ enum ProviderSettingsPanel {
         alert.addButton(withTitle: "Save")
         alert.addButton(withTitle: "Cancel")
 
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: 360, height: 100))
+        // +20 over the original 100 to make room for the status label tucked
+        // under the model row, using the same negative-y tuck the popup already used.
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: 360, height: 120))
 
         let keyLabel = NSTextField(labelWithString: "API key:")
-        keyLabel.frame = NSRect(x: 0, y: 73, width: 90, height: 17)
+        keyLabel.frame = NSRect(x: 0, y: 93, width: 90, height: 17)
         keyLabel.font = NSFont.systemFont(ofSize: 11)
         keyLabel.textColor = .secondaryLabelColor
         container.addSubview(keyLabel)
 
-        let keyField = NSSecureTextField(frame: NSRect(x: 0, y: 46, width: 280, height: 24))
+        let keyField = NSSecureTextField(frame: NSRect(x: 0, y: 66, width: 280, height: 24))
         keyField.placeholderString = keyPresent
             ? "\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}  (leave blank to keep)"
             : "\(provider.displayName) API key"
         container.addSubview(keyField)
 
-        let pasteBtn = NSButton(frame: NSRect(x: 290, y: 46, width: 70, height: 24))
+        let pasteBtn = NSButton(frame: NSRect(x: 290, y: 66, width: 70, height: 24))
         pasteBtn.title = "Paste"
         pasteBtn.bezelStyle = .inline
         pasteBtn.font = NSFont.systemFont(ofSize: 10)
         container.addSubview(pasteBtn)
 
         let modelLabel = NSTextField(labelWithString: "Model:")
-        modelLabel.frame = NSRect(x: 0, y: 22, width: 60, height: 17)
+        modelLabel.frame = NSRect(x: 0, y: 42, width: 60, height: 17)
         modelLabel.font = NSFont.systemFont(ofSize: 11)
         modelLabel.textColor = .secondaryLabelColor
         container.addSubview(modelLabel)
@@ -58,10 +61,25 @@ enum ProviderSettingsPanel {
         if !options.contains(modelString) {
             options.append(modelString)
         }
-        let modelPopup = NSPopUpButton(frame: NSRect(x: 0, y: -4, width: 360, height: 24))
+        // Narrower than the key field's row to leave room for the Refresh button,
+        // same proportions as the key field / Paste button above.
+        let modelPopup = NSPopUpButton(frame: NSRect(x: 0, y: 16, width: 280, height: 24))
         modelPopup.addItems(withTitles: options)
         modelPopup.selectItem(withTitle: modelString)
         container.addSubview(modelPopup)
+
+        let refreshBtn = NSButton(frame: NSRect(x: 290, y: 16, width: 70, height: 24))
+        refreshBtn.title = "Refresh"
+        refreshBtn.bezelStyle = .inline
+        refreshBtn.font = NSFont.systemFont(ofSize: 10)
+        container.addSubview(refreshBtn)
+
+        let statusLabel = NSTextField(labelWithString: "")
+        statusLabel.frame = NSRect(x: 0, y: -4, width: 360, height: 14)
+        statusLabel.font = NSFont.systemFont(ofSize: 10)
+        statusLabel.textColor = .secondaryLabelColor
+        statusLabel.lineBreakMode = .byTruncatingTail
+        container.addSubview(statusLabel)
 
         alert.accessoryView = container
 
@@ -70,6 +88,18 @@ enum ProviderSettingsPanel {
         pasteBtn.action = #selector(PasteHandler.paste)
         objc_setAssociatedObject(alert, &pasteHandlerAssociationKey, pasteHandler, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
 
+        let refreshHandler = RefreshHandler(
+            provider: provider,
+            storedAPIKey: storedAPIKey,
+            keyField: keyField,
+            popup: modelPopup,
+            button: refreshBtn,
+            statusLabel: statusLabel
+        )
+        refreshBtn.target = refreshHandler
+        refreshBtn.action = #selector(RefreshHandler.refresh)
+        objc_setAssociatedObject(alert, &refreshHandlerAssociationKey, refreshHandler, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+
         alert.window.initialFirstResponder = keyField
 
         let response = alert.runModal()
@@ -77,7 +107,7 @@ enum ProviderSettingsPanel {
 
         let key = keyField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         let model = modelPopup.titleOfSelectedItem ?? provider.defaultModel
-        onSave(key.isEmpty ? nil : key, model)
+        onSave(key.isEmpty ? nil : key, model, refreshHandler.refreshedOptions)
     }
 }
 
@@ -129,3 +159,83 @@ private final class PasteHandler: NSObject {
 }
 
 private var pasteHandlerAssociationKey: UInt8 = 0
+
+/// Fetches the provider's live model catalog and repopulates the popup in place.
+/// Owns the fetched list so the panel can hand it back to `onSave` after the modal closes.
+private final class RefreshHandler: NSObject {
+    private weak var keyField: NSSecureTextField?
+    private weak var popup: NSPopUpButton?
+    private weak var button: NSButton?
+    private weak var statusLabel: NSTextField?
+    private let provider: Provider
+    private let storedAPIKey: String?
+    private let client = ModelCatalogClient()
+    private(set) var refreshedOptions: [String]?
+
+    init(
+        provider: Provider,
+        storedAPIKey: String?,
+        keyField: NSSecureTextField,
+        popup: NSPopUpButton,
+        button: NSButton,
+        statusLabel: NSTextField
+    ) {
+        self.provider = provider
+        self.storedAPIKey = storedAPIKey
+        self.keyField = keyField
+        self.popup = popup
+        self.button = button
+        self.statusLabel = statusLabel
+    }
+
+    @objc func refresh() {
+        // Prefer whatever's typed right now (first-time setup: paste key → Refresh →
+        // pick model, before Save has ever persisted anything), else fall back to
+        // the already-stored key.
+        let typed = keyField?.stringValue.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let apiKeyToUse = typed.isEmpty ? storedAPIKey : typed
+        guard let apiKeyToUse, !apiKeyToUse.isEmpty else {
+            statusLabel?.stringValue = "Add an API key first"
+            return
+        }
+
+        button?.isEnabled = false
+        button?.title = "\u{2026}"
+        statusLabel?.stringValue = ""
+
+        let provider = self.provider
+        let client = self.client
+        Task {
+            do {
+                let models = try await client.fetchModels(for: provider, apiKey: apiKeyToUse)
+                await MainActor.run { [weak self] in
+                    self?.applyRefreshedOptions(models)
+                }
+            } catch {
+                await MainActor.run { [weak self] in
+                    self?.button?.isEnabled = true
+                    self?.button?.title = "Refresh"
+                    self?.statusLabel?.stringValue = "Failed \u{2014} \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func applyRefreshedOptions(_ models: [String]) {
+        refreshedOptions = models
+        let previousSelection = popup?.titleOfSelectedItem
+        popup?.removeAllItems()
+        popup?.addItems(withTitles: models)
+        if let previousSelection, models.contains(previousSelection) {
+            popup?.selectItem(withTitle: previousSelection)
+        } else {
+            popup?.selectItem(at: 0)
+        }
+        button?.isEnabled = true
+        button?.title = "Refresh"
+        statusLabel?.stringValue = "Updated \u{2014} \(models.count) models"
+    }
+}
+
+private var refreshHandlerAssociationKey: UInt8 = 0
