@@ -65,6 +65,18 @@ final class ModelCatalogTests: XCTestCase {
         XCTAssertEqual(models, ["gemini/gemini-2.5-pro", "gemini/gemini-2.5-flash"])
     }
 
+    /// A model omitting supportedGenerationMethods must be skipped, not fail the whole decode.
+    func testGeminiToleratesModelMissingSupportedGenerationMethods() throws {
+        let json = #"""
+        {"models":[
+            {"name":"models/gemini-3-pro-preview","supportedGenerationMethods":["generateContent"]},
+            {"name":"models/some-future-model"}
+        ]}
+        """#
+        let models = try ModelCatalogClient.parseModels(provider: .gemini, from: Data(json.utf8))
+        XCTAssertEqual(models, ["gemini/gemini-3-pro-preview"])
+    }
+
     /// Gemini advertises generateContent on image/TTS/robotics/music models too, so the
     /// text-chat filter has to do the real work. Payload mirrors the live v1beta list.
     func testGeminiDropsNonTextModelsThatStillSupportGenerateContent() throws {

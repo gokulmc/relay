@@ -54,7 +54,12 @@ public struct ModelCatalogClient: Sendable {
             return URL(string: "https://api.anthropic.com/v1/models")!
         case .gemini:
             var components = URLComponents(string: "https://generativelanguage.googleapis.com/v1beta/models")!
-            components.queryItems = [URLQueryItem(name: "key", value: apiKey)]
+            // Gemini pages at 50 by default and already lists ~58 models, so without an
+            // explicit size the tail is silently dropped (1000 is the documented max).
+            components.queryItems = [
+                URLQueryItem(name: "key", value: apiKey),
+                URLQueryItem(name: "pageSize", value: "1000"),
+            ]
             return components.url!
         }
     }
@@ -78,7 +83,7 @@ public struct ModelCatalogClient: Sendable {
         case .gemini:
             let models = try decode(GeminiListResponse.self, from: data).models
             let ids = models
-                .filter { $0.supportedGenerationMethods.contains("generateContent") }
+                .filter { ($0.supportedGenerationMethods ?? []).contains("generateContent") }
                 .map { $0.name.hasPrefix("models/") ? String($0.name.dropFirst("models/".count)) : $0.name }
                 .filter(isChatCapableGeminiModel)
             return try dedupe(ids.map { "gemini/" + $0 })
@@ -141,7 +146,8 @@ private struct IDListResponse: Decodable {
 private struct GeminiListResponse: Decodable {
     struct Model: Decodable {
         let name: String
-        let supportedGenerationMethods: [String]
+        /// Optional so one entry omitting it can't fail the decode for the whole list.
+        let supportedGenerationMethods: [String]?
     }
     let models: [Model]
 }
