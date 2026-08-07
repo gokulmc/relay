@@ -65,6 +65,19 @@ final class ProxyAndVenvTests: XCTestCase {
         XCTAssertEqual(calls.first?.arguments, ["--version"])
     }
 
+    /// The fastapi ceiling is load-bearing: litellm's own `fastapi>=0.136.3,<1.0` allows
+    /// versions that dropped `get_flat_dependant`, which its proxy still imports, so an
+    /// unpinned install produces a proxy that dies at startup. Losing this pin silently
+    /// reinstalls that breakage on every Repair.
+    func testVenvInstallerPinsFastAPIBelowTheBreakingRelease() {
+        let args = VenvInstaller.pipInstallArguments
+        XCTAssertTrue(args.contains("litellm[proxy]"))
+        guard let pin = args.first(where: { $0.hasPrefix("fastapi") }) else {
+            return XCTFail("litellm[proxy] would install without a fastapi pin: \(args)")
+        }
+        XCTAssertEqual(pin, "fastapi>=0.136.3,<0.140.1")
+    }
+
     func testProxyProcessManagerReconcileNoPidfile() async {
         let manager = ProxyProcessManager(
             appSupportDir: tempDir,

@@ -102,6 +102,12 @@ public struct VenvInstaller {
         }
     }
 
+    /// Exposed so a test can guard the fastapi ceiling (see the comment at the call site) —
+    /// losing it silently reinstalls a proxy that can't start.
+    static let pipInstallArguments = [
+        "install", "litellm[proxy]", "prometheus-client", "fastapi>=0.136.3,<0.140.1",
+    ]
+
     private func install(force _: Bool) async throws {
         try fileManager.createDirectory(at: appSupportDir, withIntermediateDirectories: true)
 
@@ -137,9 +143,15 @@ public struct VenvInstaller {
         // prometheus_client isn't bundled with litellm[proxy] — without it, enabling the
         // prometheus callback (for usage tracking) crashes the proxy on startup with
         // ModuleNotFoundError.
+        //
+        // The fastapi ceiling is load-bearing: litellm only asks for `fastapi>=0.136.3,<1.0`,
+        // but FastAPI dropped `get_flat_dependant` in 0.140.1 while litellm's proxy still
+        // imports it. An unpinned install therefore resolves to a fastapi that makes the proxy
+        // die at startup with an ImportError — and because this runs on Repair too, a "repair"
+        // silently reinstalled the breakage. Keep the ceiling until litellm stops using it.
         let pipResult = try await runner.run(
             command: pipURL.path,
-            arguments: ["install", "litellm[proxy]", "prometheus-client"],
+            arguments: Self.pipInstallArguments,
             environment: nil,
             workingDirectory: nil
         )
