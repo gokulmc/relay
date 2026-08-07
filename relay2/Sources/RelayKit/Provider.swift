@@ -52,7 +52,13 @@ public enum Provider: String, Codable, CaseIterable, Sendable {
         case .openAI:
             ["openai/gpt-5.2", "openai/gpt-5.2-codex", "openai/o4-mini"]
         case .gemini:
-            ["gemini/gemini-2.5-pro", "gemini/gemini-2.5-flash"]
+            [
+                "gemini/gemini-3-pro-preview",
+                "gemini/gemini-3.1-pro-preview",
+                "gemini/gemini-3.6-flash",
+                "gemini/gemini-2.5-pro",
+                "gemini/gemini-2.5-flash",
+            ]
         }
     }
 

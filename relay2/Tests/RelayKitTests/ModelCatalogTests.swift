@@ -65,6 +65,26 @@ final class ModelCatalogTests: XCTestCase {
         XCTAssertEqual(models, ["gemini/gemini-2.5-pro", "gemini/gemini-2.5-flash"])
     }
 
+    /// Gemini advertises generateContent on image/TTS/robotics/music models too, so the
+    /// text-chat filter has to do the real work. Payload mirrors the live v1beta list.
+    func testGeminiDropsNonTextModelsThatStillSupportGenerateContent() throws {
+        let json = #"""
+        {"models":[
+            {"name":"models/gemini-3-pro-preview","supportedGenerationMethods":["generateContent"]},
+            {"name":"models/gemini-3-pro-image","supportedGenerationMethods":["generateContent"]},
+            {"name":"models/gemini-3.1-flash-tts-preview","supportedGenerationMethods":["generateContent"]},
+            {"name":"models/gemini-robotics-er-2-preview","supportedGenerationMethods":["generateContent"]},
+            {"name":"models/gemini-2.5-computer-use-preview-10-2025","supportedGenerationMethods":["generateContent"]},
+            {"name":"models/gemini-3.1-pro-preview-customtools","supportedGenerationMethods":["generateContent"]},
+            {"name":"models/lyria-3-pro-preview","supportedGenerationMethods":["generateContent"]},
+            {"name":"models/gemma-4-31b-it","supportedGenerationMethods":["generateContent"]},
+            {"name":"models/gemini-3.6-flash","supportedGenerationMethods":["generateContent"]}
+        ]}
+        """#
+        let models = try ModelCatalogClient.parseModels(provider: .gemini, from: Data(json.utf8))
+        XCTAssertEqual(models, ["gemini/gemini-3-pro-preview", "gemini/gemini-3.6-flash"])
+    }
+
     // MARK: - Malformed / empty payloads throw
 
     func testEmptyDataArrayThrows() {

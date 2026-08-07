@@ -80,6 +80,7 @@ public struct ModelCatalogClient: Sendable {
             let ids = models
                 .filter { $0.supportedGenerationMethods.contains("generateContent") }
                 .map { $0.name.hasPrefix("models/") ? String($0.name.dropFirst("models/".count)) : $0.name }
+                .filter(isChatCapableGeminiModel)
             return try dedupe(ids.map { "gemini/" + $0 })
         }
     }
@@ -113,6 +114,17 @@ public struct ModelCatalogClient: Sendable {
         let nonChatMarkers = [
             "embedding", "whisper", "tts", "dall-e", "audio",
             "image", "moderation", "transcribe", "realtime", "-instruct",
+        ]
+        return !nonChatMarkers.contains { id.contains($0) }
+    }
+
+    /// `generateContent` support alone is too broad on Gemini — image, TTS, robotics,
+    /// music (lyria) and research models all advertise it. Keep only the text chat line.
+    private static func isChatCapableGeminiModel(_ id: String) -> Bool {
+        guard id.hasPrefix("gemini-") else { return false }
+        let nonChatMarkers = [
+            "image", "tts", "audio", "embedding", "aqa", "robotics",
+            "computer-use", "lyria", "veo", "imagen", "customtools",
         ]
         return !nonChatMarkers.contains { id.contains($0) }
     }
