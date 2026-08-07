@@ -205,19 +205,28 @@ private final class RefreshHandler: NSObject {
 
         let provider = self.provider
         let client = self.client
-        Task {
+        Task { [weak self] in
             do {
                 let models = try await client.fetchModels(for: provider, apiKey: apiKeyToUse)
-                await MainActor.run { [weak self] in
-                    self?.applyRefreshedOptions(models)
-                }
+                Self.onModalMainThread { self?.applyRefreshedOptions(models) }
             } catch {
-                await MainActor.run { [weak self] in
+                let message = error.localizedDescription
+                Self.onModalMainThread {
                     self?.button?.isEnabled = true
                     self?.button?.title = "Refresh"
-                    self?.statusLabel?.stringValue = "Failed \u{2014} \(error.localizedDescription)"
+                    self?.statusLabel?.stringValue = "Failed \u{2014} \(message)"
                 }
             }
+        }
+    }
+
+    /// `NSAlert.runModal()` parks the main thread in `.modalPanel`, a mode that does not
+    /// service the main-queue blocks `MainActor.run`/`DispatchQueue.main.async` post — so a
+    /// UI update scheduled that way never runs until the sheet is dismissed, leaving the
+    /// button stuck on its in-flight title. Enqueue directly on the run loop naming that mode.
+    private static func onModalMainThread(_ body: @escaping @MainActor () -> Void) {
+        RunLoop.main.perform(inModes: [.common, .modalPanel]) {
+            MainActor.assumeIsolated(body)
         }
     }
 
