@@ -64,7 +64,10 @@ public final class ToggleService: @unchecked Sendable {
     }
 
     public convenience init() {
-        let logs = ProxyLogStore()
+        let logFileURL = AppSupport.defaultDirectory()
+            .appendingPathComponent("logs", isDirectory: true)
+            .appendingPathComponent("proxy.log")
+        let logs = ProxyLogStore(fileURL: logFileURL)
         let proxy = ProxyProcessManager(logStore: logs)
         self.init(proxyManager: proxy)
     }

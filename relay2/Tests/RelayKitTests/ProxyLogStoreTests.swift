@@ -108,4 +108,126 @@ final class ProxyLogStoreTests: XCTestCase {
         let snapshot = store.snapshot()
         XCTAssertEqual(snapshot.count, 100)
     }
+
+    // MARK: - File logging
+
+    private func makeTempDir() -> URL {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    private func cleanup(_ dir: URL) {
+        try? FileManager.default.removeItem(at: dir)
+    }
+
+    func testFileLoggingWritesLinesToDisk() throws {
+        let dir = makeTempDir()
+        defer { cleanup(dir) }
+        let fileURL = dir.appendingPathComponent("proxy.log")
+        let store = ProxyLogStore(fileURL: fileURL)
+
+        store.append("hello world")
+        store.appendChunk("second\nthird")
+
+        let contents = try String(contentsOf: fileURL, encoding: .utf8)
+        XCTAssertTrue(contents.contains("hello world"))
+        XCTAssertTrue(contents.contains("second"))
+        XCTAssertTrue(contents.contains("third"))
+        XCTAssertEqual(store.logFileURL, fileURL)
+    }
+
+    func testFileLoggingWritesSessionStartMarker() throws {
+        let dir = makeTempDir()
+        defer { cleanup(dir) }
+        let fileURL = dir.appendingPathComponent("proxy.log")
+        _ = ProxyLogStore(fileURL: fileURL)
+
+        let contents = try String(contentsOf: fileURL, encoding: .utf8)
+        XCTAssertTrue(contents.contains("=== proxy log session started"))
+    }
+
+    func testFileLoggingPrefixesPersistedLinesWithISO8601Timestamp() throws {
+        let dir = makeTempDir()
+        defer { cleanup(dir) }
+        let fileURL = dir.appendingPathComponent("proxy.log")
+        let store = ProxyLogStore(fileURL: fileURL)
+
+        store.append("boom")
+
+        let contents = try String(contentsOf: fileURL, encoding: .utf8)
+        let boomLine = contents.split(separator: "\n").map(String.init).first { $0.contains("boom") }
+        XCTAssertNotNil(boomLine)
+        let pattern = #"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z {2}boom$"#
+        XCTAssertNotNil(boomLine?.range(of: pattern, options: .regularExpression))
+    }
+
+    func testFileLoggingKeepsSnapshotAndJoinedTextRawAndTimestampFree() {
+        let dir = makeTempDir()
+        defer { cleanup(dir) }
+        let fileURL = dir.appendingPathComponent("proxy.log")
+        let store = ProxyLogStore(fileURL: fileURL)
+
+        store.append("line1")
+        store.append("line2")
+
+        XCTAssertEqual(store.snapshot(), ["line1", "line2"])
+        XCTAssertEqual(store.joinedText, "line1\nline2")
+    }
+
+    func testRotationCreatesArchiveAndShrinksCurrentFile() throws {
+        let dir = makeTempDir()
+        defer { cleanup(dir) }
+        let fileURL = dir.appendingPathComponent("proxy.log")
+        let store = ProxyLogStore(fileURL: fileURL, maxBytes: 200)
+
+        var totalBytesAppended = 0
+        for i in 0..<50 {
+            let line = "line number \(i) with some padding text to grow the file"
+            // Matches the on-disk "<20-char ISO8601Z timestamp><2 spaces><line>\n" format.
+            totalBytesAppended += 20 + 2 + line.utf8.count + 1
+            store.append(line)
+        }
+
+        let archive1 = fileURL.appendingPathExtension("1")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: archive1.path))
+
+        let currentSize = try FileManager.default.attributesOfItem(atPath: fileURL.path)[.size] as? Int ?? -1
+        let archiveSize = try FileManager.default.attributesOfItem(atPath: archive1.path)[.size] as? Int ?? -1
+        XCTAssertGreaterThanOrEqual(archiveSize, 200)
+        // Rotation happened at least once, so the current file can't hold everything
+        // that was ever written to it — it's far smaller than the un-rotated total.
+        XCTAssertLessThan(currentSize, totalBytesAppended / 2)
+    }
+
+    func testRotationDeletesArchivesBeyondRetentionLimit() throws {
+        let dir = makeTempDir()
+        defer { cleanup(dir) }
+        let fileURL = dir.appendingPathComponent("proxy.log")
+        let store = ProxyLogStore(fileURL: fileURL, maxBytes: 100)
+
+        for i in 0..<300 {
+            store.append("line \(i) with enough padding text to force several rotations")
+        }
+
+        let archive1 = fileURL.appendingPathExtension("1")
+        let archive2 = fileURL.appendingPathExtension("2")
+        let archive3 = fileURL.appendingPathExtension("3")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: archive1.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: archive2.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: archive3.path))
+    }
+
+    func testMemoryOnlyStoreWritesNothingToDisk() {
+        let dir = makeTempDir()
+        defer { cleanup(dir) }
+        let wouldBeFileURL = dir.appendingPathComponent("proxy.log")
+
+        let store = ProxyLogStore()
+        store.append("only memory")
+
+        XCTAssertNil(store.logFileURL)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: wouldBeFileURL.path))
+        XCTAssertEqual(store.snapshot(), ["only memory"])
+    }
 }
