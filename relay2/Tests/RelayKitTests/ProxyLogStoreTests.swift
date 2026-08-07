@@ -218,6 +218,30 @@ final class ProxyLogStoreTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: archive3.path))
     }
 
+    // MARK: - App-level events
+
+    func testAppendAppEventAppearsInSnapshotWithMarker() {
+        let store = ProxyLogStore()
+        store.appendAppEvent("switched to gemini (gemini/gemini-2.5-pro) on port 4010")
+        let snapshot = store.snapshot()
+        XCTAssertEqual(snapshot, ["[app] switched to gemini (gemini/gemini-2.5-pro) on port 4010"])
+    }
+
+    func testAppendAppEventPersistsToFileWithTimestampAndMarker() throws {
+        let dir = makeTempDir()
+        defer { cleanup(dir) }
+        let fileURL = dir.appendingPathComponent("proxy.log")
+        let store = ProxyLogStore(fileURL: fileURL)
+
+        store.appendAppEvent("switch failed: missing API key")
+
+        let contents = try String(contentsOf: fileURL, encoding: .utf8)
+        let eventLine = contents.split(separator: "\n").map(String.init).first { $0.contains("[app]") }
+        XCTAssertNotNil(eventLine)
+        let pattern = #"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z {2}\[app\] switch failed: missing API key$"#
+        XCTAssertNotNil(eventLine?.range(of: pattern, options: .regularExpression))
+    }
+
     func testMemoryOnlyStoreWritesNothingToDisk() {
         let dir = makeTempDir()
         defer { cleanup(dir) }

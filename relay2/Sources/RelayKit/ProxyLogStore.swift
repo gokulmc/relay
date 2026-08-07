@@ -50,6 +50,14 @@ public final class ProxyLogStore: @unchecked Sendable {
         persistLocked(line)
     }
 
+    /// Logs an app-level event (e.g. a switch failure that happened before the proxy
+    /// subprocess ever started, so it would otherwise never reach this file). Routes
+    /// through `append` so it gets the same timestamping and persistence as proxy
+    /// output, with an `[app]` marker to distinguish it from proxy lines on disk.
+    public func appendAppEvent(_ message: String) {
+        append("[app] \(message)")
+    }
+
     public func appendChunk(_ chunk: String) {
         for line in chunk.split(separator: "\n", omittingEmptySubsequences: false) {
             let trimmed = String(line)

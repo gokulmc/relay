@@ -68,6 +68,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 self.refreshStatusItem()
                 if self.routingMode == .deepSeek, status == .stopped {
                     self.lastError = "Proxy stopped \u{2014} click Start Proxy or switch again."
+                    // Not routed through showError (no alert on silent startup reconcile),
+                    // so log it directly — this is the one lastError assignment that isn't.
+                    self.toggleService.logs.appendAppEvent("warning: \(self.lastError!)")
                 }
             }
         }
@@ -132,9 +135,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
 
         if let lastError, !lastError.isEmpty {
+            // Cap well under the ~60-70 char guidance to leave room for the trailing
+            // hint below, and collapse a multi-line traceback to one line so it can
+            // never stretch the menu — the full text lives in the log window instead.
+            let summary = MenuText.menuErrorSummary(lastError, cap: 42)
             let errorItem = NSMenuItem()
-            errorItem.attributedTitle = styledText("\u{26A0}\u{FE0F} \(lastError)", size: 12, color: .systemRed)
-            errorItem.isEnabled = false
+            errorItem.attributedTitle = styledText(
+                "\u{26A0}\u{FE0F} \(summary) \u{2014} click for details",
+                size: 12,
+                color: .systemRed
+            )
+            errorItem.action = #selector(openLogs)
+            errorItem.target = self
             menu.addItem(errorItem)
             menu.addItem(.separator())
         }
@@ -380,6 +392,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             activeProvider = nil
             routingMode = result.mode
             proxyStatus = toggleService.proxy.status
+            toggleService.logs.appendAppEvent("switched to Claude (claude.ai direct)")
             showInfo("Routing back to Claude. \(ToggleResult.restartCaveat)")
         } catch {
             lastError = error.localizedDescription
@@ -404,6 +417,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             routingMode = result.mode
             activeProvider = provider
             proxyStatus = toggleService.proxy.status
+            let switchedPrefs = toggleService.preferences()
+            toggleService.logs.appendAppEvent(
+                "switched to \(provider.rawValue) (\(switchedPrefs.activeModel())) on port \(switchedPrefs.proxyPort)"
+            )
             showInfo("Switched to \(provider.displayName). \(ToggleResult.restartCaveat)")
         } catch {
             lastError = error.localizedDescription
@@ -436,6 +453,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             try await toggleService.setModel(model, for: provider)
             proxyStatus = toggleService.proxy.status
+            // Only worth a log line when it actually took live effect — otherwise
+            // it's just a preference save for a provider that isn't running.
+            if willRestart {
+                toggleService.logs.appendAppEvent("set \(provider.rawValue) model to \(model), proxy restarted")
+            }
         } catch {
             lastError = error.localizedDescription
             proxyStatus = toggleService.proxy.status
@@ -499,6 +521,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             currentSessionUsage = .zero
             try await toggleService.updatePort(port)
             proxyStatus = toggleService.proxy.status
+            toggleService.logs.appendAppEvent("proxy port changed to \(port)")
         } catch {
             lastError = error.localizedDescription
             proxyStatus = toggleService.proxy.status
@@ -586,6 +609,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             try await toggleService.startProxyManually(for: provider)
             activeProvider = provider
             proxyStatus = toggleService.proxy.status
+            let port = toggleService.preferences().proxyPort
+            toggleService.logs.appendAppEvent("started proxy for \(provider.rawValue) on port \(port)")
         } catch {
             lastError = error.localizedDescription
             proxyStatus = toggleService.proxy.status
@@ -626,6 +651,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         defer { isBusy = false }
         do {
             try await toggleService.repairEnvironment()
+            toggleService.logs.appendAppEvent("repaired LiteLLM environment")
             showInfo("LiteLLM environment reinstalled successfully.")
         } catch {
             lastError = error.localizedDescription
@@ -655,6 +681,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             currentSessionUsage = .zero
             activeProvider = nil
             refreshStatusItem()
+            toggleService.logs.appendAppEvent("force reverted to Claude")
             showInfo("Reverted to Claude. Restart any open `claude` terminal sessions or VS Code windows to pick up the change.")
         } catch {
             lastError = error.localizedDescription
@@ -719,7 +746,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     // MARK: - Alerts
 
+    /// Single choke point for app-level error logging: every catch block that sets
+    /// `lastError` also calls this with the same message, so logging here (rather
+    /// than at each call site) avoids writing the same line twice.
     private func showError(_ message: String) {
+        toggleService.logs.appendAppEvent("error: \(message)")
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.alertStyle = .warning
