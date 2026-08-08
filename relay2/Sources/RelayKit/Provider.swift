@@ -39,7 +39,10 @@ public enum Provider: String, Codable, CaseIterable, Sendable {
         case .deepSeek: "deepseek/deepseek-v4-pro"
         case .anthropic: "anthropic/claude-sonnet-5-20250929"
         case .openAI: "openai/gpt-5.2"
-        case .gemini: "gemini/gemini-2.5-pro"
+        // Google retired gemini-2.5-pro ("no longer available to new users" → 404 on
+        // generateContent). `gemini-pro-latest` is the GA alias that tracks whatever the
+        // current pro model is, so it can't rot the same way a pinned id does.
+        case .gemini: "gemini/gemini-pro-latest"
         }
     }
 
@@ -52,12 +55,16 @@ public enum Provider: String, Codable, CaseIterable, Sendable {
         case .openAI:
             ["openai/gpt-5.2", "openai/gpt-5.2-codex", "openai/o4-mini"]
         case .gemini:
+            // Every id here was verified to return 200 from a real generateContent call —
+            // ListModels advertises retired models too, so presence in the catalog is not
+            // evidence the model still answers. See `retiredGeminiModels`.
             [
-                "gemini/gemini-3-pro-preview",
+                "gemini/gemini-pro-latest",
                 "gemini/gemini-3.1-pro-preview",
                 "gemini/gemini-3.6-flash",
-                "gemini/gemini-2.5-pro",
+                "gemini/gemini-3.5-flash",
                 "gemini/gemini-2.5-flash",
+                "gemini/gemini-flash-latest",
             ]
         }
     }

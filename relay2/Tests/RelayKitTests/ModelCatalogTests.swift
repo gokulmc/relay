@@ -56,25 +56,25 @@ final class ModelCatalogTests: XCTestCase {
     func testGeminiKeepsOnlyGenerateContentAndStripsModelsPrefix() throws {
         let json = #"""
         {"models":[
-            {"name":"models/gemini-2.5-pro","supportedGenerationMethods":["generateContent","countTokens"]},
+            {"name":"models/gemini-pro-latest","supportedGenerationMethods":["generateContent","countTokens"]},
             {"name":"models/embedding-001","supportedGenerationMethods":["embedContent"]},
             {"name":"models/gemini-2.5-flash","supportedGenerationMethods":["generateContent"]}
         ]}
         """#
         let models = try ModelCatalogClient.parseModels(provider: .gemini, from: Data(json.utf8))
-        XCTAssertEqual(models, ["gemini/gemini-2.5-pro", "gemini/gemini-2.5-flash"])
+        XCTAssertEqual(models, ["gemini/gemini-pro-latest", "gemini/gemini-2.5-flash"])
     }
 
     /// A model omitting supportedGenerationMethods must be skipped, not fail the whole decode.
     func testGeminiToleratesModelMissingSupportedGenerationMethods() throws {
         let json = #"""
         {"models":[
-            {"name":"models/gemini-3-pro-preview","supportedGenerationMethods":["generateContent"]},
+            {"name":"models/gemini-3.1-pro-preview","supportedGenerationMethods":["generateContent"]},
             {"name":"models/some-future-model"}
         ]}
         """#
         let models = try ModelCatalogClient.parseModels(provider: .gemini, from: Data(json.utf8))
-        XCTAssertEqual(models, ["gemini/gemini-3-pro-preview"])
+        XCTAssertEqual(models, ["gemini/gemini-3.1-pro-preview"])
     }
 
     /// Gemini advertises generateContent on image/TTS/robotics/music models too, so the
@@ -82,7 +82,7 @@ final class ModelCatalogTests: XCTestCase {
     func testGeminiDropsNonTextModelsThatStillSupportGenerateContent() throws {
         let json = #"""
         {"models":[
-            {"name":"models/gemini-3-pro-preview","supportedGenerationMethods":["generateContent"]},
+            {"name":"models/gemini-3.1-pro-preview","supportedGenerationMethods":["generateContent"]},
             {"name":"models/gemini-3-pro-image","supportedGenerationMethods":["generateContent"]},
             {"name":"models/gemini-3.1-flash-tts-preview","supportedGenerationMethods":["generateContent"]},
             {"name":"models/gemini-robotics-er-2-preview","supportedGenerationMethods":["generateContent"]},
@@ -94,7 +94,26 @@ final class ModelCatalogTests: XCTestCase {
         ]}
         """#
         let models = try ModelCatalogClient.parseModels(provider: .gemini, from: Data(json.utf8))
-        XCTAssertEqual(models, ["gemini/gemini-3-pro-preview", "gemini/gemini-3.6-flash"])
+        XCTAssertEqual(models, ["gemini/gemini-3.1-pro-preview", "gemini/gemini-3.6-flash"])
+    }
+
+    /// Google keeps advertising retired models with `generateContent` in
+    /// supportedGenerationMethods, so metadata alone can't tell them apart from live ones —
+    /// they only fail at request time with 404 "no longer available". Offering one is what
+    /// made every Gemini request 404, so the denylist has to drop them here.
+    func testGeminiDropsRetiredModelsStillAdvertisedByListModels() throws {
+        let json = #"""
+        {"models":[
+            {"name":"models/gemini-2.5-pro","supportedGenerationMethods":["generateContent"]},
+            {"name":"models/gemini-2.0-flash","supportedGenerationMethods":["generateContent"]},
+            {"name":"models/gemini-2.5-flash-lite","supportedGenerationMethods":["generateContent"]},
+            {"name":"models/gemini-3-pro-preview","supportedGenerationMethods":["generateContent"]},
+            {"name":"models/gemini-omni-flash-preview","supportedGenerationMethods":["generateContent"]},
+            {"name":"models/gemini-pro-latest","supportedGenerationMethods":["generateContent"]}
+        ]}
+        """#
+        let models = try ModelCatalogClient.parseModels(provider: .gemini, from: Data(json.utf8))
+        XCTAssertEqual(models, ["gemini/gemini-pro-latest"])
     }
 
     // MARK: - Malformed / empty payloads throw

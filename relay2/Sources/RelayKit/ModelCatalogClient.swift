@@ -125,11 +125,33 @@ public struct ModelCatalogClient: Sendable {
 
     /// `generateContent` support alone is too broad on Gemini — image, TTS, robotics,
     /// music (lyria) and research models all advertise it. Keep only the text chat line.
+    /// Models Google still lists but which no longer answer `generateContent`.
+    ///
+    /// ListModels keeps advertising retired models with `generateContent` in
+    /// `supportedGenerationMethods`, so the catalog metadata gives no signal at all —
+    /// these were found only by issuing a real request and reading the 404 body
+    /// ("This model … is no longer available"). Without this denylist a Refresh happily
+    /// re-persists them and picking one 404s every request.
+    ///
+    /// Empirically derived, so it goes stale in the other direction: re-probe the live
+    /// catalog when Gemini ids are next touched rather than trusting this list forever.
+    private static let retiredGeminiModels: Set<String> = [
+        "gemini-2.5-pro",
+        "gemini-2.5-flash-lite",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-001",
+        "gemini-2.0-flash-lite",
+        "gemini-2.0-flash-lite-001",
+        "gemini-3-pro-preview",
+    ]
+
     private static func isChatCapableGeminiModel(_ id: String) -> Bool {
         guard id.hasPrefix("gemini-") else { return false }
+        guard !retiredGeminiModels.contains(id) else { return false }
         let nonChatMarkers = [
             "image", "tts", "audio", "embedding", "aqa", "robotics",
-            "computer-use", "lyria", "veo", "imagen", "customtools",
+            // `omni` models reject generateContent with 400 "only supports Interactions API".
+            "computer-use", "lyria", "veo", "imagen", "customtools", "omni",
         ]
         return !nonChatMarkers.contains { id.contains($0) }
     }
