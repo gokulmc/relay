@@ -33,7 +33,8 @@ except Exception:
     _SSL_CTX = ssl.create_default_context()
 
 VISION_MODEL = os.environ.get(
-    "GROQ_VISION_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct"
+    # llama-4-scout was deprecated by Groq (404); qwen3.6-27b is the current vision model.
+    "GROQ_VISION_MODEL", "qwen/qwen3.6-27b"
 )
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"

@@ -13,7 +13,9 @@ public enum AppSupport {
     // Groq vision (image → text describe, so DeepSeek can "see" images).
     public static let groqAPIKeyEnvVar = "GROQ_API_KEY"
     public static let groqVisionModelEnvVar = "GROQ_VISION_MODEL"
-    public static let defaultGroqModelString = "meta-llama/llama-4-scout-17b-16e-instruct"
+    // Groq deprecated meta-llama/llama-4-scout-17b-16e-instruct (now 404s). qwen/qwen3.6-27b
+    // is the currently-available vision-capable (text+image) model on the free tier.
+    public static let defaultGroqModelString = "qwen/qwen3.6-27b"
     public static let groqVisionCallbackModule = "groq_vision_callback"
 
     public static func baseURL(port: Int = defaultPort) -> String {
