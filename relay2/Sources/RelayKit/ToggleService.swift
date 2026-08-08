@@ -179,6 +179,13 @@ public final class ToggleService: @unchecked Sendable {
             throw ToggleError.settings(error.localizedDescription)
         }
 
+        // The config above only takes effect at process launch, and `start()` is a no-op
+        // while the proxy is already running — so switching provider without stopping
+        // first left the old process serving the *previous* provider while the UI
+        // reported success. That routed Gemini traffic to DeepSeek (402 Insufficient
+        // Balance). `restartRunningProxyIfNeeded` handles the model-change path the same way.
+        proxyManager.stop()
+
         do {
             try await proxyManager.start(
                 environment: proxyEnvironment(apiKey: apiKey, masterKey: masterKey, provider: provider)

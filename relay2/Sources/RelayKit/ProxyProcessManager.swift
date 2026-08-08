@@ -109,6 +109,11 @@ public final class ProxyProcessManager: @unchecked Sendable {
         return status
     }
 
+    /// Launches the proxy. **Config is read once, at launch** — LiteLLM never re-reads it.
+    ///
+    /// Returning early when already running means a caller that rewrote the config first
+    /// gets a silent no-op: the old process keeps serving the old config while the call
+    /// appears to succeed. Any caller changing provider/model/port must `stop()` first.
     public func start(environment: [String: String]) async throws {
         if case .running = status { return }
         if case .starting = status { return }

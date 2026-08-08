@@ -36,6 +36,45 @@ final class ToggleServiceTests: XCTestCase {
         XCTAssertEqual(service.currentMode(), .claude)
     }
 
+    /// Switching provider while the proxy is already running must relaunch it.
+    ///
+    /// LiteLLM reads its config once at launch, and `ProxyProcessManager.start()` no-ops
+    /// when already running — so the old regression wrote a correct config, reported
+    /// success, and left the previous provider's process serving every request. Asserting
+    /// on config contents cannot catch that (the file was already right); only the PID can.
+    func testSwitchingProviderWhileRunningRelaunchesTheProxy() async throws {
+        guard keychain.write("sk-test-deepseek", for: .deepSeekAPIKey),
+              keychain.write("sk-test-gemini", for: .geminiAPIKey)
+        else {
+            throw XCTSkip("Keychain write unavailable in this environment")
+        }
+
+        try seedFakeLiteLLM()
+        try seedSettingsFiles()
+
+        let service = await makeService(healthAlwaysOK: true)
+        let pidFile = tempDir.appendingPathComponent("proxy.pid")
+
+        _ = try await service.switchTo(provider: .deepSeek)
+        let firstPID = try String(contentsOf: pidFile, encoding: .utf8)
+
+        _ = try await service.switchTo(provider: .gemini)
+        let secondPID = try String(contentsOf: pidFile, encoding: .utf8)
+
+        XCTAssertNotEqual(
+            firstPID, secondPID,
+            "provider switch left the old proxy process running, so traffic kept going to the previous provider"
+        )
+        XCTAssertEqual(service.proxy.status, .running)
+
+        let config = try String(
+            contentsOf: tempDir.appendingPathComponent("litellm-config.yaml"),
+            encoding: .utf8
+        )
+        XCTAssertTrue(config.contains("gemini/"), "config should name the newly-selected provider")
+        XCTAssertTrue(config.contains("GEMINI_API_KEY"))
+    }
+
     func testSwitchToDeepSeekThenClaudeRoundTrip() async throws {
         guard keychain.write("sk-test-deepseek", for: .deepSeekAPIKey) else {
             throw XCTSkip("Keychain write unavailable in this environment")
